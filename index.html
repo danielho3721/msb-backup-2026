@@ -1,0 +1,3626 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="地板滾球裁判端">
+  <meta name="format-detection" content="telephone=no">
+  <title>MSB Backup 2026｜本機記分板</title>
+  <script>window.APP_CONFIG = { eventYear: 2026, eventName: "MSB Backup 2026", defaultRegion: "local" }; window.PUBLIC_SCOREBOARD_MODE = true;</script>
+
+  <script src="./assets/msb_formal_config.js"></script>
+  <script src="./assets/tailwind.runtime.js"></script>
+  <script src="./assets/lucide.min.js"></script>
+
+
+
+
+
+
+
+  <style>
+    :root { --text-primary: #0f172a; --input-placeholder: #64748b; --input-focus: #0284c7; }
+    html, body { width: 100%; height: 100%; background: #020617; overflow: hidden; overscroll-behavior: none; }
+    body {
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+    button { user-select: none; -webkit-user-select: none; }
+    input { -webkit-user-select: text; user-select: text; }
+    .ball { width: 28px; height: 28px; border-radius: 999px; border: 2px solid currentColor; opacity: .55; }
+    .ball.used { opacity: 1; background: currentColor; box-shadow: 0 0 10px currentColor; }
+    .side-active { box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); opacity: 1; }
+    #app-view { height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); overflow: hidden; }
+    .topbar { min-height: 52px; }
+    .scoreboard-main { width: 100%; max-width: 1800px; margin: 0 auto; min-height: 0; height: 100%; padding: 12px; gap: 14px; overflow: hidden; }
+    .team-panel { min-height: 260px; border-top-width: 8px; border-left-width: 0; border-radius: 28px; overflow: hidden; }
+    .team-name { text-align: center; width: 100%; }
+    .score-row { min-height: 0; }
+    .score-number { line-height: .9; font-variant-numeric: tabular-nums; }
+    .score-button { width: 56px; height: 56px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 900; }
+    .timer-grid { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px; gap: .6rem; align-items: center; width: 100%; max-width: 440px; margin: 0 auto; }
+    .touch-btn { min-height: 44px; }
+    .panel-bottom { width: 100%; display: flex; align-items: end; justify-content: space-between; gap: .75rem; }
+    .balls-row { display: flex; gap: .55rem; padding: .5rem; border-radius: 1rem; background: rgb(15 23 42 / .35); }
+    .center-card { min-height: 0; border-radius: 24px; }
+    .violation-btn { width: 40px; height: 40px; border-radius: .75rem; display: inline-flex; align-items: center; justify-content: center; }
+    .violation-badges { min-height: 28px; display: flex; flex-wrap: wrap; gap: .35rem; justify-content: center; }
+    .violation-badge { border-radius: 999px; padding: .15rem .5rem; font-size: .75rem; font-weight: 900; background: rgb(245 158 11 / .18); border: 1px solid rgb(245 158 11 / .5); color: rgb(253 230 138); }
+    .report-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .report-table th, .report-table td { border: 1px solid rgb(51 65 85); padding: .45rem; text-align: center; }
+    .report-table th { background: rgb(15 23 42); color: rgb(203 213 225); font-size: .72rem; }
+    .modal-safe { padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .auth-login-input {
+      background: #fff;
+      color: var(--text-primary);
+      -webkit-text-fill-color: var(--text-primary);
+      caret-color: var(--text-primary);
+    }
+    .auth-login-input::placeholder { color: var(--input-placeholder); opacity: 1; }
+    .auth-login-input:focus { outline: 3px solid #38bdf8; outline-offset: 2px; border-color: var(--input-focus); }
+    .auth-login-input:disabled { background: #e2e8f0; color: #475569; -webkit-text-fill-color: #475569; cursor: not-allowed; }
+    .auth-login-input[aria-invalid="true"] { border-color: #dc2626; outline-color: #fca5a5; }
+    .auth-login-input:-webkit-autofill,
+    .auth-login-input:-webkit-autofill:hover,
+    .auth-login-input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text-primary);
+      -webkit-box-shadow: 0 0 0 1000px #fff inset;
+      box-shadow: 0 0 0 1000px #fff inset;
+      caret-color: var(--text-primary);
+    }
+    @media (orientation: landscape), (min-width: 900px) {
+      main.scoreboard-main { display: grid !important; grid-template-columns: minmax(0, 4fr) minmax(260px, 2fr) minmax(0, 4fr); grid-template-rows: minmax(0, 1fr); }
+      .team-panel { min-height: 0; }
+      .scoreboard-main > .team-panel,
+      .scoreboard-main > .control-panel { width: 100%; height: 100%; min-width: 0; }
+      .score-number { font-size: clamp(7rem, 14vw, 13rem); width: auto; }
+      .timer-display { font-size: clamp(3.2rem, 6.4vw, 7rem); }
+      .team-name { font-size: clamp(1.5rem, 2.1vw, 2rem); }
+    }
+    @media (max-width: 899px) and (orientation: portrait) {
+      body { overflow-y: auto; }
+      #app-view { height: auto; min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+      main.scoreboard-main { display: flex; flex-direction: column; height: auto; }
+      .timer-display { font-size: clamp(3rem, 16vw, 4.75rem); }
+      .score-number { font-size: clamp(4rem, 20vw, 6rem); }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-white">
+  <div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl">
+      <h1 class="text-3xl font-black text-center text-sky-300">裁判端</h1>
+      <p class="text-center text-slate-400 mt-2 mb-6">使用裁判帳號登入後選擇場地與賽事</p>
+      <input id="login-email" type="email" placeholder="Email" autocomplete="username" aria-invalid="false" class="auth-login-input w-full border border-slate-700 rounded-xl p-4 mb-3">
+      <input id="login-password" type="password" placeholder="密碼" autocomplete="current-password" aria-invalid="false" class="auth-login-input w-full border border-slate-700 rounded-xl p-4 mb-4">
+      <button onclick="handleLogin()" class="w-full bg-sky-600 hover:bg-sky-500 rounded-xl py-4 font-black">登入</button>
+      <p id="login-msg" class="text-red-300 text-center text-sm min-h-[24px] mt-3"></p>
+    </div>
+  </div>
+
+  <div id="app-view" class="hidden flex flex-col bg-slate-950">
+    <header class="topbar shrink-0 px-4 flex items-center justify-between gap-3 bg-slate-950 text-white">
+      <div class="flex items-center gap-2 min-w-0">
+        <button onclick="toggleModal('settings-modal', true)" class="touch-btn bg-slate-800 rounded-lg px-3 flex items-center gap-2 text-slate-200">
+          <i data-lucide="settings" width="20"></i>
+          <span id="header-mode-text" class="hidden md:inline text-sm font-bold">團體賽</span>
+        </button>
+        <button onclick="showMatchPicker()" class="touch-btn bg-slate-800 rounded-lg px-3 flex items-center gap-2 text-slate-200">
+          <i data-lucide="list" width="20"></i>
+        </button>
+        <div id="header-match-info" class="hidden md:block text-xs text-slate-400 truncate max-w-[360px]">尚未選擇賽事</div>
+      </div>
+      <button onclick="toggleJackOwner()" id="jack-btn" class="touch-btn bg-slate-800 border border-slate-700 rounded-lg px-4 text-sm font-black text-slate-100">暖身時間</button>
+      <button onclick="handleLogout()" id="logout-btn" class="touch-btn bg-slate-800 rounded-lg px-3 text-xs font-bold">登出</button>
+    </header>
+
+    <section id="training-mode-banner" class="hidden shrink-0 mx-3 mb-2 rounded-xl border border-amber-500/70 bg-amber-950/70 px-4 py-3 text-amber-100 shadow-lg" aria-live="polite">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <strong class="text-sm tracking-widest">NATIONAL TRAINING MODE</strong>
+        <span class="rounded-full border border-amber-400/60 px-2 py-0.5 text-xs font-black">裁判訓練模式</span>
+      </div>
+      <p class="mt-1 text-xs text-amber-200">此頁操作僅寫入訓練資料，不影響正式賽事。</p>
+    </section>
+
+    <section id="color-assignment-banner" class="shrink-0 mx-3 mb-2 rounded-xl border border-amber-700/60 bg-amber-950/30 px-4 py-3" aria-live="polite">
+      <p class="text-sm leading-6 text-amber-100">請確認紅、藍方與檢錄結果一致。確認後本場比賽不得再交換顏色。</p>
+      <div class="mt-2 flex flex-wrap items-center gap-3">
+        <p id="color-assignment-status" class="text-xs text-slate-200">尚未確認顏色</p>
+        <button id="confirm-colors-btn" onclick="confirmTeamColors()" class="touch-btn rounded-lg bg-emerald-700 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">確認顏色</button>
+      </div>
+    </section>
+
+    <main class="scoreboard-main flex-1">
+      <section id="red-panel" class="team-panel bg-slate-900/60 border-red-600 p-3 md:p-4 flex flex-col justify-between opacity-80">
+        <div class="z-10">
+          <input id="red-name" class="team-name bg-transparent text-red-100 outline-none font-black placeholder-red-900/60" value="紅方" disabled>
+          <div id="red-violations" class="violation-badges mt-2"></div>
+        </div>
+        <div class="score-row flex-1 flex items-center justify-center gap-3 md:gap-6">
+          <button onclick="adjustScore('red', -1)" class="score-button bg-slate-800/80 text-slate-300 border border-red-900/40">-</button>
+          <div id="red-score" class="score-number font-black text-red-500 text-center drop-shadow-2xl">0</div>
+          <button onclick="adjustScore('red', 1)" class="score-button bg-red-900/50 text-red-100 border border-red-600/50">+</button>
+        </div>
+        <div id="red-tb-hint" class="hidden text-center text-xs font-black text-amber-200 -mt-3 mb-1">TB 計分中：加減分將記錄於決勝局</div>
+        <div class="space-y-3">
+          <div class="timer-grid">
+            <button onclick="adjustSideTime('red', -1)" class="touch-btn bg-slate-900/70 border border-red-900/70 rounded-xl text-3xl font-black text-red-200">-</button>
+            <button onclick="activateSide('red')" id="red-timer-btn" class="timer-display font-mono font-black bg-slate-950/60 rounded-2xl py-3 border-2 border-red-900/60 text-red-100 tabular-nums">04:30</button>
+            <button onclick="adjustSideTime('red', 1)" class="touch-btn bg-slate-900/70 border border-red-900/70 rounded-xl text-3xl font-black text-red-200">+</button>
+          </div>
+          <div class="panel-bottom">
+            <div id="red-balls" class="balls-row text-red-500"></div>
+            <div class="flex items-end gap-2">
+              <button onclick="openViolationModal('red')" class="violation-btn bg-amber-900/50 border border-amber-500/40 text-amber-200" aria-label="紅隊犯規">
+                <i data-lucide="triangle-alert" width="22"></i>
+              </button>
+              <div class="flex flex-col items-end gap-1">
+                <span class="text-[10px] text-red-200/70">獲判罰球</span>
+                <div class="flex items-center gap-2 bg-red-950/60 border border-red-900/50 rounded-lg px-2 py-1">
+                  <button onclick="adjustPenalty('red', -1)" class="px-2 text-red-200 font-black">-</button>
+                  <strong id="red-penalty" class="text-red-200 min-w-4 text-center">0</strong>
+                  <button onclick="adjustPenalty('red', 1)" class="px-2 text-red-200 font-black">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="control-panel flex flex-col gap-3 min-h-0">
+        <div class="center-card bg-slate-900 border border-slate-700 p-4 flex-1 flex flex-col items-center justify-center text-center shadow-xl">
+          <div class="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Class</div>
+          <div id="center-mode" class="text-4xl lg:text-6xl font-black text-white mb-5">準備</div>
+          <div class="w-12 h-1 bg-slate-700 rounded-full mb-5"></div>
+          <div class="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Status</div>
+          <div id="center-end-display" class="text-white text-5xl lg:text-6xl mx-1 font-black">暖身</div>
+          <div id="center-subtext" class="text-slate-500 text-xs mt-2">Warm Up - 同時暖身</div>
+          <div id="tb-score-card" class="hidden mt-4 w-full max-w-[260px] rounded-2xl border border-amber-500/60 bg-slate-950/90 p-3 shadow-xl">
+            <div class="text-[10px] font-black uppercase tracking-widest text-amber-300 mb-1">決勝局分數</div>
+            <div class="flex items-center justify-center gap-3 text-2xl font-black tabular-nums">
+              <span class="text-red-300">紅</span>
+              <span id="tb-red-score" class="text-red-300 min-w-7 text-center">0</span>
+              <span class="text-slate-400">－</span>
+              <span id="tb-blue-score" class="text-sky-300 min-w-7 text-center">0</span>
+              <span class="text-sky-300">藍</span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">不列入正規總分</div>
+          </div>
+          <div class="text-slate-400 text-sm mt-3">共 <span id="center-total-ends"></span> 局</div>
+        </div>
+        <div class="grid grid-cols-1 gap-2 shrink-0">
+          <button onclick="nextEnd()" id="next-btn" class="touch-btn bg-sky-600 rounded-xl py-4 font-black text-lg">開始比賽 (Start)</button>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="confirmResetCurrentEnd()" class="touch-btn bg-slate-800 rounded-xl py-3 font-bold text-slate-200">重置本局</button>
+            <button onclick="confirmEndMatch()" class="touch-btn bg-slate-800 border border-slate-700 rounded-xl py-3 font-bold text-slate-200">結束比賽</button>
+          </div>
+          <button onclick="openReportModal()" class="touch-btn bg-slate-900 border border-slate-700 rounded-xl py-3 font-bold text-slate-200">View Report</button>
+        </div>
+      </section>
+
+      <section id="blue-panel" class="team-panel bg-slate-900/60 border-sky-600 p-3 md:p-4 flex flex-col justify-between opacity-80">
+        <div class="z-10">
+          <input id="blue-name" class="team-name bg-transparent text-sky-100 outline-none font-black placeholder-sky-900/60" value="藍方" disabled>
+          <div id="blue-violations" class="violation-badges mt-2"></div>
+        </div>
+        <div class="score-row flex-1 flex items-center justify-center gap-3 md:gap-6">
+          <button onclick="adjustScore('blue', -1)" class="score-button bg-slate-800/80 text-slate-300 border border-sky-900/40">-</button>
+          <div id="blue-score" class="score-number font-black text-sky-500 text-center drop-shadow-2xl">0</div>
+          <button onclick="adjustScore('blue', 1)" class="score-button bg-sky-900/50 text-sky-100 border border-sky-600/50">+</button>
+        </div>
+        <div id="blue-tb-hint" class="hidden text-center text-xs font-black text-amber-200 -mt-3 mb-1">TB 計分中：加減分將記錄於決勝局</div>
+        <div class="space-y-3">
+          <div class="timer-grid">
+            <button onclick="adjustSideTime('blue', -1)" class="touch-btn bg-slate-900/70 border border-sky-900/70 rounded-xl text-3xl font-black text-sky-200">-</button>
+            <button onclick="activateSide('blue')" id="blue-timer-btn" class="timer-display font-mono font-black bg-slate-950/60 rounded-2xl py-3 border-2 border-sky-900/60 text-sky-100 tabular-nums">04:30</button>
+            <button onclick="adjustSideTime('blue', 1)" class="touch-btn bg-slate-900/70 border border-sky-900/70 rounded-xl text-3xl font-black text-sky-200">+</button>
+          </div>
+          <div class="panel-bottom">
+            <div id="blue-balls" class="balls-row text-sky-500"></div>
+            <div class="flex items-end gap-2">
+              <button onclick="openViolationModal('blue')" class="violation-btn bg-amber-900/50 border border-amber-500/40 text-amber-200" aria-label="藍隊犯規">
+                <i data-lucide="triangle-alert" width="22"></i>
+              </button>
+              <div class="flex flex-col items-end gap-1">
+                <span class="text-[10px] text-sky-200/70">獲判罰球</span>
+                <div class="flex items-center gap-2 bg-sky-950/60 border border-sky-900/50 rounded-lg px-2 py-1">
+                  <button onclick="adjustPenalty('blue', -1)" class="px-2 text-sky-200 font-black">-</button>
+                  <strong id="blue-penalty" class="text-sky-200 min-w-4 text-center">0</strong>
+                  <button onclick="adjustPenalty('blue', 1)" class="px-2 text-sky-200 font-black">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="picker-modal" class="hidden fixed inset-0 z-50 bg-slate-950/95 p-4 overflow-y-auto modal-safe">
+    <div class="max-w-md mx-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 id="picker-title" class="text-xl font-black">選擇賽事</h2>
+        <button onclick="hideMatchPicker()" class="bg-slate-800 rounded px-3 py-2">關閉</button>
+      </div>
+      <div id="public-scoreboard-setup" class="hidden rounded-2xl border border-emerald-700/60 bg-emerald-950/30 p-4">
+        <h3 class="text-lg font-black text-emerald-100">公開本機記分板</h3>
+        <p class="mt-2 text-sm leading-6 text-emerald-200/90">輸入兩隊名稱並設定每局時間，即可使用完整記分功能。資料保存在此裝置，不需要登入，也不連接 Firebase 或正式賽事資料。</p>
+        <label class="mt-4 block text-sm font-bold text-red-200">紅方名稱
+          <input id="public-red-name" type="text" maxlength="80" value="紅方" class="mt-1 w-full rounded-xl border border-red-900/70 bg-slate-950 p-3 text-white" autocomplete="off">
+        </label>
+        <label class="mt-3 block text-sm font-bold text-sky-200">藍方名稱
+          <input id="public-blue-name" type="text" maxlength="80" value="藍方" class="mt-1 w-full rounded-xl border border-sky-900/70 bg-slate-950 p-3 text-white" autocomplete="off">
+        </label>
+        <label class="mt-3 block text-sm font-bold text-emerald-100" for="public-end-duration">每局時間
+          <select id="public-end-duration" onchange="updateCustomEndDuration()" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white">
+            <option value="3" selected>3 分鐘（預設）</option>
+            <option value="4">4 分鐘</option>
+            <option value="5">5 分鐘</option>
+            <option value="custom">自訂時間</option>
+          </select>
+        </label>
+        <label id="custom-end-duration-wrap" class="hidden mt-3 block text-sm font-bold text-emerald-100" for="public-custom-end-minutes">自訂時間（1～30 分鐘）
+          <input id="public-custom-end-minutes" type="number" min="1" max="30" step="1" value="6" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white" inputmode="numeric">
+        </label>
+        <button id="public-start-btn" onclick="startPublicScoreboard()" class="mt-4 w-full rounded-xl bg-emerald-700 py-4 font-black text-white hover:bg-emerald-600">開始使用</button>
+        <p id="public-scoreboard-status" class="mt-3 text-xs text-emerald-200/80">每局 3 分鐘預設，共 4 局。開始比賽後本場時間會鎖定。</p>
+      </div>
+      <div id="authenticated-match-picker">
+        <select id="region-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3"></select>
+        <select id="venue-select" onchange="loadMatches()" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3"></select>
+        <div id="matches-list" class="space-y-2"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/90 p-4 overflow-y-auto modal-safe">
+    <div class="max-w-2xl mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h2 class="text-xl font-black text-white">賽制設定</h2>
+        <button onclick="toggleModal('settings-modal', false)" class="touch-btn bg-slate-800 rounded-lg px-3 text-slate-200">關閉</button>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+        <button onclick="applyGameMode('Team')" class="touch-btn text-left bg-slate-950 border border-emerald-700 rounded-xl p-4 md:col-span-2">
+          <div class="font-black text-emerald-200">團體賽</div>
+          <div class="text-sm text-slate-400">本機記分板固定 4 局；每局時間依賽前設定</div>
+        </button>
+        <button onclick="applyGameMode('WarmUpOnly')" class="touch-btn text-left bg-slate-950 border border-amber-700/60 rounded-xl p-4 md:col-span-2">
+          <div class="font-black text-amber-200">僅計時暖身</div>
+          <div class="text-sm text-slate-400">2:00 / 不進入正規局</div>
+        </button>
+      </div>
+      <div class="border-t border-slate-700 pt-4">
+        <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2">低頻功能</div>
+        <button id="swap-team-colors-btn" onclick="swapTeamColors()" class="touch-btn w-full text-left bg-slate-950 border border-slate-700 rounded-xl p-4 mb-3">
+          <div class="font-black">交換隊伍／換顏色</div>
+          <div class="text-sm text-slate-400">紅隊 ↔ 藍隊，依檢錄擲銅板結果交換顏色</div>
+        </button>
+        <button id="score-correction-settings-btn" onclick="openScoreCorrectionModal()" class="touch-btn w-full text-left bg-slate-950 border border-slate-700 rounded-xl p-4 mb-3">
+          <div class="font-black">修正分數</div>
+          <div class="text-sm text-slate-400">送出前可修正已進入的局數，不會清除犯規、罰球或計時紀錄</div>
+        </button>
+        <div class="bg-slate-950 border border-slate-700 rounded-xl p-4 mb-3">
+          <div class="font-black text-slate-200 mb-3">本局紀錄</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="flex items-center justify-between bg-slate-900 rounded-xl px-4 py-3">
+              <span class="font-bold text-red-200">紅方 BNP</span>
+              <div class="flex items-center gap-3">
+                <button onclick="adjustBnp('red', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-red-200 font-black">-</button>
+                <strong id="red-bnp" class="text-red-200 min-w-8 text-center text-xl">0</strong>
+                <button onclick="adjustBnp('red', 1)" class="touch-btn w-10 bg-red-900/60 rounded-lg text-red-100 font-black">+</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between bg-slate-900 rounded-xl px-4 py-3">
+              <span class="font-bold text-sky-200">藍方 BNP</span>
+              <div class="flex items-center gap-3">
+                <button onclick="adjustBnp('blue', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-sky-200 font-black">-</button>
+                <strong id="blue-bnp" class="text-sky-200 min-w-8 text-center text-xl">0</strong>
+                <button onclick="adjustBnp('blue', 1)" class="touch-btn w-10 bg-sky-900/60 rounded-lg text-sky-100 font-black">+</button>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mt-3">BNP 僅記錄到目前局別的 Report，不影響比分、罰球或球數。</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <button onclick="startSpecialTimeout('medical')" class="touch-btn bg-red-900/70 rounded-xl py-3 font-bold">醫療暫停</button>
+          <button onclick="startSpecialTimeout('technical')" class="touch-btn bg-amber-900/70 rounded-xl py-3 font-bold">技術暫停</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="violation-modal" class="hidden fixed inset-0 z-[75] bg-black/90 p-4 overflow-y-auto modal-safe" onclick="if (event.target.id === 'violation-modal') closeViolationModal()">
+    <div class="max-w-3xl mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 id="violation-title" class="text-xl font-black text-white">記錄犯規</h2>
+          <p id="violation-side-label" class="text-sm text-slate-400 mt-1"></p>
+        </div>
+        <button onclick="closeViolationModal()" class="touch-btn bg-slate-800 rounded-lg px-3 text-slate-200">關閉</button>
+      </div>
+      <div id="violation-list" class="space-y-4 max-h-[72vh] overflow-y-auto pr-1"></div>
+    </div>
+  </div>
+
+  <div id="report-modal" class="hidden fixed inset-0 z-[76] bg-black/90 p-4 overflow-y-auto modal-safe" onclick="if (event.target.id === 'report-modal') toggleModal('report-modal', false)">
+    <div class="max-w-6xl mx-auto bg-slate-900 border border-slate-700 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-black text-white">View Report 每局紀錄</h2>
+        <button onclick="toggleModal('report-modal', false)" class="touch-btn bg-slate-800 rounded-lg px-3 text-slate-200">關閉</button>
+      </div>
+      <div class="hidden">
+        <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-3">BNP 本局紀錄</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="flex items-center justify-between bg-slate-900 rounded-xl px-4 py-3">
+            <span class="font-bold text-red-200">紅方 BNP</span>
+            <div class="flex items-center gap-3">
+              <button onclick="adjustBnp('red', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-red-200 font-black">-</button>
+              <strong id="red-bnp-report-old" class="text-red-200 min-w-8 text-center text-xl">0</strong>
+              <button onclick="adjustBnp('red', 1)" class="touch-btn w-10 bg-red-900/60 rounded-lg text-red-100 font-black">+</button>
+            </div>
+          </div>
+          <div class="flex items-center justify-between bg-slate-900 rounded-xl px-4 py-3">
+            <span class="font-bold text-sky-200">藍方 BNP</span>
+            <div class="flex items-center gap-3">
+              <button onclick="adjustBnp('blue', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-sky-200 font-black">-</button>
+              <strong id="blue-bnp-report-old" class="text-sky-200 min-w-8 text-center text-xl">0</strong>
+              <button onclick="adjustBnp('blue', 1)" class="touch-btn w-10 bg-sky-900/60 rounded-lg text-sky-100 font-black">+</button>
+            </div>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">BNP 只記錄到目前局別的 Report，不影響比分、罰球或球數。</p>
+      </div>
+      <div id="report-content" class="space-y-5"></div>
+    </div>
+  </div>
+
+  <div id="result-modal" class="hidden fixed inset-0 z-[60] bg-black/95 p-4 overflow-y-auto modal-safe">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5 w-full max-w-6xl mx-auto text-center">
+      <h2 class="text-2xl font-black mb-4">確認完賽</h2>
+      <div class="text-xs font-black uppercase tracking-widest text-slate-500 mb-1">Match Report</div>
+      <div class="text-6xl font-black mb-3"><span id="result-red-score">0</span> : <span id="result-blue-score">0</span></div>
+      <div id="result-winner-text" class="text-xl font-bold mb-5"></div>
+      <div id="result-ends" class="text-left text-sm bg-slate-950 rounded-xl p-3 mb-4 max-h-40 overflow-y-auto"></div>
+      <div id="match-report-content" class="text-left bg-slate-950 border border-slate-700 rounded-xl p-3 mb-4 overflow-x-auto"></div>
+      <div class="text-left bg-slate-950 border border-slate-700 rounded-xl p-3 mb-4">
+        <div class="font-black text-slate-200 mb-2">Match Approval</div>
+        <label class="flex items-center gap-3 py-2">
+          <input id="approval-red-player" type="checkbox" onchange="updateMatchApproval('redPlayer', this.checked)" class="w-5 h-5">
+          <span>Red Player</span>
+        </label>
+        <label class="flex items-center gap-3 py-2">
+          <input id="approval-blue-player" type="checkbox" onchange="updateMatchApproval('bluePlayer', this.checked)" class="w-5 h-5">
+          <span>Blue Player</span>
+        </label>
+        <label class="flex items-center gap-3 py-2">
+          <input id="approval-referee" type="checkbox" onchange="updateMatchApproval('referee', this.checked)" class="w-5 h-5">
+          <span>Referee</span>
+        </label>
+      </div>
+      <p id="upload-status" class="text-sm text-slate-400 min-h-[24px] mb-3"></p>
+      <button id="upload-btn" onclick="confirmAndUpload()" class="w-full bg-emerald-600 rounded-xl py-4 font-black mb-2">上傳結果</button>
+      <button onclick="toggleModal('result-modal', false)" class="w-full bg-slate-700 rounded-xl py-3">返回修改</button>
+    </div>
+  </div>
+
+  <div id="score-correction-modal" class="hidden fixed inset-0 z-[95] bg-black/95 p-4 overflow-y-auto modal-safe">
+    <div class="bg-slate-900 border border-sky-700 rounded-2xl p-5 w-full max-w-xl mx-auto text-left">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-2xl font-black">修正分數</h2>
+          <p class="text-sm text-slate-400 mt-1">僅限報告送出前；犯規、罰球、BNP 與計時紀錄會保留。</p>
+        </div>
+        <button onclick="toggleModal('score-correction-modal', false)" class="touch-btn bg-slate-800 rounded-lg px-3 text-slate-200">關閉</button>
+      </div>
+      <label class="block text-sm font-bold text-slate-300 mb-2" for="score-correction-end">選擇局數</label>
+      <select id="score-correction-end" onchange="renderScoreCorrectionForm()" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 mb-4"></select>
+      <div id="score-correction-controls"></div>
+      <p id="score-correction-status" class="text-sm text-slate-400 min-h-[24px] mt-4"></p>
+      <div class="grid grid-cols-2 gap-2 mt-2">
+        <button id="apply-score-correction-btn" onclick="applyScoreCorrection()" class="bg-sky-700 rounded-xl py-3 font-black">套用修正</button>
+        <button onclick="toggleModal('score-correction-modal', false)" class="bg-slate-700 rounded-xl py-3 font-black">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="timeout-modal" class="hidden fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4 modal-safe">
+    <div class="text-center">
+      <h2 id="timeout-title" class="text-3xl font-black mb-8">暫停</h2>
+      <div id="timeout-clock" class="text-8xl font-mono font-black mb-8">10:00</div>
+      <button onclick="endSpecialTimeout()" class="bg-slate-700 rounded-xl px-8 py-4 font-black">結束暫停</button>
+    </div>
+  </div>
+
+  <div id="penalty-modal" class="hidden fixed inset-0 z-[80] bg-black/95 flex items-center justify-center p-4 modal-safe">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm text-center">
+      <div class="tracking-widest text-slate-400 font-bold mb-2">罰球</div>
+      <h2 id="penalty-title" class="text-2xl font-black mb-2">罰球</h2>
+      <p id="penalty-info" class="text-slate-400 mb-4"></p>
+      <button onclick="togglePenaltyTimer()" id="penalty-clock" class="text-7xl font-mono font-black mb-6 w-full">01:00</button>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="penaltyScore()" class="bg-emerald-600 rounded-xl py-3 font-black">投進得分 (+1)</button>
+        <button onclick="nextPenaltyShot()" class="bg-slate-700 rounded-xl py-3 font-black">未得分 / 下一球</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="tie-modal" class="hidden fixed inset-0 z-[90] bg-black/95 flex items-center justify-center p-4 modal-safe">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-sm text-center">
+      <h2 class="text-2xl font-black mb-3">Tie-break</h2>
+      <p class="text-slate-400 mb-5">請選擇 tie-break 發球方</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="startTieBreak('red')" class="bg-red-700 rounded-xl py-4 font-black">紅方</button>
+        <button onclick="startTieBreak('blue')" class="bg-sky-700 rounded-xl py-4 font-black">藍方</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="break-modal" class="hidden fixed inset-0 z-[85] bg-black/95 flex items-center justify-center p-4 modal-safe">
+    <div class="bg-slate-900 border border-amber-700 rounded-2xl p-6 w-full max-w-sm text-center">
+      <h2 class="text-2xl font-black text-amber-300 mb-2">局間休息</h2>
+      <p id="break-info" class="text-slate-300 mb-4">準備下一局</p>
+      <div id="break-clock" class="text-7xl font-mono font-black text-white mb-5">60</div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="startBreakCountdown()" id="break-start-btn" class="touch-btn bg-amber-700 rounded-xl py-3 font-black">倒數</button>
+        <button onclick="finishBreak()" class="touch-btn bg-slate-700 rounded-xl py-3 font-black">開始下一局</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const APP = window.APP_CONFIG;
+    const urlParams = new URLSearchParams(window.location.search);
+    const PUBLIC_SCOREBOARD_MODE = true;
+    const PUBLIC_SCOREBOARD_MATCH_ID = "msb-backup-local-match";
+    const auth = null;
+    const db = null;
+    const matchIdFromUrl = urlParams.get("matchId") || urlParams.get("id") || "";
+    const requestedScoreboardMode = urlParams.get("mode");
+    const SCOREBOARD_ROUTE_MODE = !urlParams.has("mode")
+      ? "formal"
+      : requestedScoreboardMode === "formal" || requestedScoreboardMode === "training"
+        ? requestedScoreboardMode
+        : "invalid";
+    const SCOREBOARD_ADAPTERS = Object.freeze({
+      formal: Object.freeze({
+        mode: "formal",
+        training: false,
+        matchCollection: "matches",
+        progressCollection: "matches",
+        reportCollection: "matchReports",
+        banner: false
+      }),
+      training: Object.freeze({
+        mode: "training",
+        training: true,
+        matchCollection: "trainingMatches",
+        progressCollection: "trainingMatches",
+        reportCollection: "trainingMatchReports",
+        banner: true
+      })
+    });
+    const SCOREBOARD_ADAPTER = SCOREBOARD_ADAPTERS[SCOREBOARD_ROUTE_MODE] || null;
+    const SCOREBOARD_ROUTE_MODE_IS_INVALID = SCOREBOARD_ROUTE_MODE === "invalid";
+    const TARGET_EVENT_YEAR = 2026;
+    const TARGET_EVENT_NAME = "MSB Backup 2026";
+    const TARGET_SCHEMA_VERSION = "msb_backup_local_v1";
+    const NATIONAL_TOTAL_ENDS = 4;
+    const NATIONAL_COMPETITION_FORMAT = window.NationalFormalMsbConfig.NATIONAL_COMPETITION_FORMAT;
+    const NATIONAL_CATEGORIES = window.NationalFormalMsbConfig.NATIONAL_CATEGORIES;
+    const VALID_REGIONS = ["north", "central", "east", "south", "final"];
+    const VALID_STAGES = ["prelim", "final"];
+    const VALID_SCOPE_PAIRS = [
+      { region: "north", stage: "prelim" },
+      { region: "central", stage: "prelim" },
+      { region: "east", stage: "prelim" },
+      { region: "south", stage: "prelim" },
+      { region: "final", stage: "final" }
+    ];
+    const CANONICAL_VENUE_PATTERN = /^場地 (?:[1-9]|10)$/;
+    let currentUser = null;
+    let currentUserProfile = null;
+    let currentUserRole = "";
+    let currentMatch = null;
+    let timer = null;
+    let activeSide = null;
+    let pausedSide = null;
+    let timeoutTimer = null;
+    let penaltyTimer = null;
+    let breakTimer = null;
+    let breakTimeLeft = 60;
+    let pendingNextEnd = null;
+    const WARM_UP_SECONDS = 120;
+    const penaltyState = { active: false, side: null, clock: 60, running: false, lastSide: null, afterCompleteAction: null };
+    const state = {
+      red: { teamId: null, name: "紅方", score: 0, timeLeft: WARM_UP_SECONDS, balls: 0, timerStarts: 0, penalties: 0, penaltiesAwardedThisEnd: 0, penaltiesScoredThisEnd: 0, bnp: 0 },
+      blue: { teamId: null, name: "藍方", score: 0, timeLeft: WARM_UP_SECONDS, balls: 0, timerStarts: 0, penalties: 0, penaltiesAwardedThisEnd: 0, penaltiesScoredThisEnd: 0, bnp: 0 },
+      currentEnd: 1,
+      totalEnds: NATIONAL_TOTAL_ENDS,
+      endSeconds: 180,
+      endHistory: [],
+      endReports: [],
+      timeoutHistory: [],
+      penaltyHistory: [],
+      violations: [],
+      tieBreak: { required: false, active: false, starter: null, winner: null, count: 0, score: { red: 0, blue: 0 } },
+      matchApproval: { redPlayer: false, bluePlayer: false, referee: false },
+      jackOwnerOverride: null,
+      firstPenaltySide: null,
+      violationTargetSide: null,
+      endStartScores: { red: 0, blue: 0 },
+      endStarted: false,
+      colorLocked: false,
+      timerEverStarted: false,
+      warmUpEverStarted: false,
+      colorMappingInvalid: false,
+      matchId: matchIdFromUrl,
+      mode: "Team",
+      competitionFormat: NATIONAL_COMPETITION_FORMAT,
+      modeLabel: "團體賽",
+      isWarmUp: true,
+      warmUpType: "simultaneous",
+      warmUpOnly: false,
+      reportSubmitted: false,
+      localReport: null,
+      localResultSummary: null
+    };
+
+    let selectedEndMinutes = 3;
+    let isRestoringLocalProgress = false;
+
+    function isTrainingMode() {
+      return Boolean(SCOREBOARD_ADAPTER && SCOREBOARD_ADAPTER.training === true);
+    }
+
+    function isPublicScoreboardMode() {
+      return PUBLIC_SCOREBOARD_MODE;
+    }
+
+    function scoreboardCollection(collectionKey) {
+      if (isPublicScoreboardMode()) {
+        throw new Error("PUBLIC_SCOREBOARD_FIRESTORE_DISABLED");
+      }
+      if (!SCOREBOARD_ADAPTER || !SCOREBOARD_ADAPTER[collectionKey]) {
+        throw new Error("SCOREBOARD_ROUTE_INVALID");
+      }
+      return db.collection(SCOREBOARD_ADAPTER[collectionKey]);
+    }
+
+    function scoreboardMatchRef(matchId) {
+      return scoreboardCollection("progressCollection").doc(matchId);
+    }
+
+    function scoreboardReportRef(matchId) {
+      return scoreboardCollection("reportCollection").doc(matchId);
+    }
+
+    function applyScoreboardRouteUi() {
+      const banner = document.getElementById("training-mode-banner");
+      if (banner) banner.classList.toggle("hidden", !isTrainingMode());
+      const logoutButton = document.getElementById("logout-btn");
+      if (logoutButton) logoutButton.textContent = isPublicScoreboardMode() ? "重新設定" : "登出";
+      const uploadButton = document.getElementById("upload-btn");
+      if (uploadButton && !state.reportSubmitted) uploadButton.textContent = isPublicScoreboardMode() ? "完成（僅本機）" : "上傳結果";
+      if (isTrainingMode()) document.title = "裁判訓練模式｜2026 全國地板滾球賽事系統";
+      if (isPublicScoreboardMode()) document.title = "MSB Backup 2026｜本機記分板";
+    }
+
+    function failClosedScoreboardRoute(message) {
+      const login = document.getElementById("login-view");
+      const app = document.getElementById("app-view");
+      if (login) login.classList.remove("hidden");
+      if (app) app.classList.add("hidden");
+      const status = document.getElementById("login-msg");
+      if (status) status.textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value == null ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function setText(el, value) {
+      if (el) el.textContent = value == null ? "" : String(value);
+    }
+
+    function createSafeTextElement(tagName, text, className) {
+      const el = document.createElement(tagName);
+      if (className) el.className = className;
+      setText(el, text);
+      return el;
+    }
+
+    function isSafeHttpUrl(url) {
+      if (!url || typeof url !== "string") return false;
+      try {
+        const parsed = new URL(url, window.location.origin);
+        return parsed.protocol === "http:" || parsed.protocol === "https:";
+      } catch (_error) {
+        return false;
+      }
+    }
+
+    function safeExternalLink(anchor, url) {
+      if (!anchor || !isSafeHttpUrl(url)) {
+        if (anchor) anchor.removeAttribute("href");
+        return false;
+      }
+      anchor.href = url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      return true;
+    }
+
+    const VIOLATION_GROUPS = [
+      {
+        title: "撤球",
+        type: "R",
+        sanction: "撤球",
+        penaltyBalls: 0,
+        items: [
+          { code: "16.5.1", short: "R", text: "裁判尚未指示顏色前釋放球" },
+          { code: "16.5.2", short: "R", text: "BC3 比賽由非選手釋放球" },
+          { code: "16.5.3", short: "R", text: "出手或釋球時運動助理員／RO 接觸選手、指示棒或推拉輪椅" },
+          { code: "16.5.4", short: "R", text: "RO 與選手同時釋放球" },
+          { code: "16.5.5", short: "R", text: "先於 Jack 釋放色球" },
+          { code: "16.5.6", short: "R", text: "第一顆色球不是由投擲 Jack 的選手釋放" },
+          { code: "16.5.7", short: "R", text: "BC3 選手在釋放 Jack、罰球或重投球前未完成雙向擺動" },
+          { code: "16.5.8", short: "R", text: "BC3 選手在回場後釋球前未重新調整球道方向" },
+          { code: "16.5.9", short: "R", text: "同一方同時打出一顆以上的球" }
+        ]
+      },
+      {
+        title: "罰球1顆",
+        type: "PB",
+        sanction: "罰球1顆",
+        penaltyBalls: 1,
+        items: [
+          { code: "16.6.1", short: "PB", text: "尚未指示其回合即進入比賽區" },
+          { code: "16.6.2", short: "PB", text: "一局尚未結束前，RO 轉身觀看比賽" },
+          { code: "16.6.3", short: "PB", text: "在對方時間準備下一次投擲、調整輪椅或球道，或滾動球" },
+          { code: "16.6.4", short: "PB", text: "未經選手要求，運動助理員／RO 移動輪椅、球道、指示棒或傳球" },
+          { code: "16.6.5", short: "PB", text: "未離開投擲路徑，且同一場比賽已被口頭警告一次" },
+          { code: "16.6.6", short: "PB", text: "一局結束前意外觸碰場內球" },
+          { code: "16.6.7", short: "PB", text: "不合理造成比賽延誤" },
+          { code: "16.6.8", short: "PB", text: "不接受裁判判決" },
+          { code: "16.6.9", short: "PB", text: "未經裁判許可進入比賽區" },
+          { code: "16.6.10", short: "PB", text: "暖身時未以合作方式配合" }
+        ]
+      },
+      {
+        title: "撤球＋罰球1顆",
+        type: "R+PB",
+        sanction: "撤球＋罰球1顆",
+        penaltyBalls: 1,
+        items: [
+          { code: "16.7.1", short: "R+PB", text: "釋放 Jack 或色球時，人員、器材、球或物品接觸界線或非投擲區地面" },
+          { code: "16.7.2", short: "R+PB", text: "釋放 Jack 或色球時，球道懸越投擲線" },
+          { code: "16.7.3", short: "R+PB", text: "釋放球時至少一側臀部（或依分類為腹部）未接觸座椅" },
+          { code: "16.7.4", short: "R+PB", text: "釋放球時球接觸投擲區外的場地部分" },
+          { code: "16.7.5", short: "R+PB", text: "RO 觀看比賽區時釋放球" },
+          { code: "16.7.6", short: "R+PB", text: "選手座椅高度高於 BC1、BC2、BC4 最高66公分" },
+          { code: "16.7.7", short: "R+PB", text: "Team 或 Pair 中隊友尚未回到場外即釋放球" },
+          { code: "16.7.8", short: "R+PB", text: "在對方回合準備後仍釋放球" }
+        ]
+      },
+      {
+        title: "罰球1顆＋黃牌",
+        type: "PB+YC",
+        sanction: "罰球1顆＋黃牌",
+        penaltyBalls: 1,
+        items: [
+          { code: "16.8.1", short: "PB+YC", text: "干擾或分散對手注意，影響其專注或動作" },
+          { code: "16.8.2", short: "PB+YC", text: "選手、運動助理員、RO 或教練有不當溝通" }
+        ]
+      },
+      {
+        title: "黃牌",
+        type: "YC",
+        sanction: "黃牌",
+        penaltyBalls: 0,
+        items: [
+          { code: "16.9.1", short: "YC", text: "未依順序進入暖身區，或攜帶超額人員" },
+          { code: "16.9.2", short: "YC", text: "攜帶超過允許數量的球進入 Call Room" },
+          { code: "16.9.3", short: "YC", text: "賽前球具檢查未符合標準" },
+          { code: "16.9.4", short: "YC", text: "未經裁判許可離開球場區域" },
+          { code: "16.9.5", short: "YC", text: "比賽中使用不符合器材標準的器材" }
+        ]
+      },
+      {
+        title: "第二張黃牌／禁賽",
+        type: "2YC",
+        sanction: "第二張黃牌；依情況禁賽或判棄權",
+        penaltyBalls: 0,
+        items: [
+          { code: "16.10.1", short: "2YC", text: "同一賽事收到第二次黃牌警告" },
+          { code: "16.10.2", short: "2YC", text: "暖身區或 Call Room 收到第二張黃牌" },
+          { code: "16.10.3", short: "2YC", text: "比賽中收到第二張黃牌" }
+        ]
+      },
+      {
+        title: "紅牌／淘汰",
+        type: "RC",
+        sanction: "紅牌；立即淘汰",
+        penaltyBalls: 0,
+        items: [
+          { code: "16.11.1", short: "RC", text: "嚴重違反運動精神，包括欺騙裁判、篡改球具或故意干擾比賽" },
+          { code: "16.11.2", short: "RC", text: "暴力行為" },
+          { code: "16.11.3", short: "RC", text: "使用冒犯、侮辱或辱罵性語言或手勢" },
+          { code: "16.11.4", short: "RC", text: "紅牌導致立即淘汰，既有成績失效" }
+        ]
+      },
+      {
+        title: "棄權",
+        type: "F",
+        sanction: "判棄權",
+        penaltyBalls: 0,
+        items: [
+          { code: "16.12.1", short: "F", text: "非蓄意損壞對手的球或器材" },
+          { code: "16.12.2", short: "F", text: "未通過賽後球具檢查" },
+          { code: "16.12.3", short: "F", text: "選手或 RO 離開球場區域" },
+          { code: "16.12.4", short: "F", text: "賽前球具檢查沒有至少三顆合格色球" }
+        ]
+      }
+    ];
+
+    async function handleScoreboardAuthState(user) {
+      if (isPublicScoreboardMode()) return;
+      currentUser = user;
+      currentUserProfile = null;
+      currentUserRole = "";
+      if (!user) {
+        document.getElementById("login-view").classList.remove("hidden");
+        document.getElementById("app-view").classList.add("hidden");
+        return;
+      }
+
+      let profileSnapshot;
+      try {
+        profileSnapshot = await db.collection("users").doc(user.uid).get();
+      } catch (error) {
+        document.getElementById("login-msg").textContent = "查詢裁判權限資料時權限不足。";
+        await auth.signOut();
+        return;
+      }
+
+      if (!profileSnapshot.exists) {
+        document.getElementById("login-msg").textContent = "裁判權限資料不完整，請聯絡管理員。";
+        await auth.signOut();
+        return;
+      }
+
+      const profile = profileSnapshot.data();
+      const role = profile.role || "";
+      if (role !== "referee" && role !== "admin") {
+        document.getElementById("login-msg").textContent = "此帳號沒有裁判端權限。";
+        await auth.signOut();
+        return;
+      }
+
+      if (role === "referee") {
+        const profileError = refereeProfileError(profile);
+        if (profileError) {
+          document.getElementById("login-msg").textContent = profileError;
+          await auth.signOut();
+          return;
+        }
+      }
+
+      currentUserProfile = profile;
+      currentUserRole = role;
+      document.getElementById("login-view").classList.add("hidden");
+      document.getElementById("app-view").classList.remove("hidden");
+      applyScoreboardRouteUi();
+      if (isTrainingMode()) {
+        hideMatchPicker();
+        if (!matchIdFromUrl) {
+          failClosedScoreboardRoute("訓練模式需要指定 training matchId。請從裁判訓練入口開始。");
+          return;
+        }
+        await selectMatch(matchIdFromUrl, { updateUrl: false, showError: true });
+        return;
+      }
+      fillPicker();
+      if (matchIdFromUrl) {
+        await selectMatch(matchIdFromUrl, { updateUrl: false, showError: true });
+      } else {
+        showMatchPicker();
+      }
+    }
+
+    async function handleLogin() {
+      if (isPublicScoreboardMode()) return;
+      const email = document.getElementById("login-email").value.trim();
+      const password = document.getElementById("login-password").value;
+      document.getElementById("login-msg").textContent = "";
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+      } catch (error) {
+        document.getElementById("login-msg").textContent = `登入失敗：${error.message}`;
+      }
+    }
+
+    function handleLogout() {
+      if (isPublicScoreboardMode()) {
+        pauseTimer();
+        currentMatch = null;
+        state.matchId = "";
+        document.getElementById("app-view").classList.add("hidden");
+        document.getElementById("login-view").classList.remove("hidden");
+        showMatchPicker();
+        return;
+      }
+      auth.signOut();
+    }
+
+    function isPublicVisibleScheduleMatch(match) {
+      if (!match) return false;
+      if (match.testData === true || match.testPurpose) return false;
+      return match.scheduleStatus === "published"
+        && match.publicVisible === true
+        && match.schemaVersion === TARGET_SCHEMA_VERSION;
+    }
+
+    function isRefereeAccessibleMatch(match) {
+      if (!match) return false;
+      return match.scheduleStatus === "published"
+        && match.publicVisible === true
+        && match.schemaVersion === TARGET_SCHEMA_VERSION;
+    }
+
+    function isNationalTrainingMatch(match) {
+      return Boolean(match
+        && match.training === true
+        && match.trainingSchemaVersion === "national_training_v1"
+        && match.eventYear === TARGET_EVENT_YEAR
+        && match.eventName === TARGET_EVENT_NAME
+        && VALID_SCOPE_PAIRS.some(scope => scope.region === match.region && scope.stage === match.stage)
+        && CANONICAL_VENUE_PATTERN.test(match.venue || "")
+        && Array.isArray(match.allowedRefereeUids)
+        && typeof match.teamA_id === "string"
+        && typeof match.teamB_id === "string");
+    }
+
+    function isRefereeAccessibleTrainingMatch(match) {
+      if (currentUserRole !== "referee" || !currentUser || !currentUserProfile || !isNationalTrainingMatch(match)) return false;
+      const scopeAllowed = refereeScopePairs(currentUserProfile).some(scope =>
+        scope.region === match.region
+        && scope.stage === match.stage
+        && currentUserProfile.assignedVenues.includes(match.venue));
+      return scopeAllowed && match.allowedRefereeUids.includes(currentUser.uid);
+    }
+
+    function refereeProfileError(profile) {
+      if (profile.eventYear !== TARGET_EVENT_YEAR) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      if (!Array.isArray(profile.assignedRegions) || profile.assignedRegions.length === 0) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      if (!profile.assignedRegions.every(region => VALID_REGIONS.includes(region))) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      if (!Array.isArray(profile.assignedVenues) || profile.assignedVenues.length === 0) {
+        return "尚未指派場地，請聯絡管理員。";
+      }
+      if (!profile.assignedVenues.every(venue => typeof venue === "string" && CANONICAL_VENUE_PATTERN.test(venue))) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      if (!Array.isArray(profile.assignedStages) || profile.assignedStages.length === 0) {
+        return "尚未指派賽程階段，請聯絡管理員。";
+      }
+      if (!profile.assignedStages.every(stage => VALID_STAGES.includes(stage))) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      const scopePairs = refereeScopePairs(profile);
+      const coveredRegions = new Set(scopePairs.map(scope => scope.region));
+      if (scopePairs.length === 0
+        || profile.assignedRegions.some(region => !coveredRegions.has(region))) {
+        return "裁判權限資料不完整，請聯絡管理員。";
+      }
+      return "";
+    }
+
+    function refereeScopePairs(profile) {
+      return VALID_SCOPE_PAIRS.filter(scope =>
+        profile.assignedRegions.includes(scope.region)
+        && profile.assignedStages.includes(scope.stage)
+      );
+    }
+
+    function regionLabel(region) {
+      const regionStage = APP.stages.find(stage => stage.id === region);
+      return regionStage ? regionStage.label : region;
+    }
+
+    function renderRefereeRegionOptions(matches) {
+      if (currentUserRole !== "referee") return;
+      const regionSelect = document.getElementById("region-select");
+      const previousRegion = regionSelect.value;
+      const availableRegions = [...new Set(matches
+        .map(match => match.region)
+        .filter(region => currentUserProfile.assignedRegions.includes(region)))]
+        .filter(region => VALID_REGIONS.includes(region));
+      if (availableRegions.length === 0) {
+        regionSelect.innerHTML = '<option value="">目前沒有符合授權的區域</option>';
+        regionSelect.value = "";
+        regionSelect.disabled = true;
+        return;
+      }
+      regionSelect.innerHTML = '<option value="">全部已授權區域</option>' + availableRegions
+        .map(region => `<option value="${escapeHtml(region)}">${escapeHtml(regionLabel(region))}</option>`)
+        .join("");
+      regionSelect.value = previousRegion === "" || availableRegions.includes(previousRegion) ? previousRegion : "";
+      regionSelect.disabled = availableRegions.length <= 1;
+    }
+
+    function fillPicker() {
+      const regionSelect = document.getElementById("region-select");
+      const venueSelect = document.getElementById("venue-select");
+      if (currentUserRole === "referee") {
+        const assignedRegions = currentUserProfile.assignedRegions.filter(region => VALID_REGIONS.includes(region));
+        regionSelect.innerHTML = '<option value="">全部已授權區域</option>' + assignedRegions
+          .map(region => `<option value="${escapeHtml(region)}">${escapeHtml(regionLabel(region))}</option>`)
+          .join("");
+        regionSelect.value = "";
+        regionSelect.disabled = assignedRegions.length <= 1;
+        venueSelect.innerHTML = '<option value="">全部已指派場地</option>' + currentUserProfile.assignedVenues
+          .map(venue => `<option value="${escapeHtml(venue)}">${escapeHtml(venue)}</option>`)
+          .join("");
+        venueSelect.disabled = false;
+      } else {
+        regionSelect.innerHTML = APP.stages.map(stage => `<option value="${escapeHtml(stage.id)}" ${stage.id === APP.defaultRegion ? "selected" : ""}>${escapeHtml(stage.label)}</option>`).join("");
+        regionSelect.disabled = false;
+        const venues = Array.isArray(APP.canonicalVenues) ? APP.canonicalVenues.slice() : [];
+        venueSelect.innerHTML = '<option value="">全部場地</option>' + venues.map(venue => `<option value="${escapeHtml(venue)}">${escapeHtml(venue)}</option>`).join("");
+        venueSelect.disabled = false;
+      }
+      document.getElementById("region-select").onchange = loadMatches;
+      document.getElementById("venue-select").onchange = loadMatches;
+    }
+
+    function matchTimeMillis(match) {
+      if (!match || !match.matchTime) return 0;
+      if (match.matchTime.toDate) return match.matchTime.toDate().getTime();
+      if (match.matchTime.toMillis) return match.matchTime.toMillis();
+      const parsed = new Date(match.matchTime).getTime();
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function setMatchListMessage(message) {
+      const list = document.getElementById("matches-list");
+      list.innerHTML = `<div class="text-center text-slate-500 py-6 border border-dashed border-slate-700 rounded-xl">${escapeHtml(message)}</div>`;
+    }
+
+    function renderMatches(matches) {
+      const list = document.getElementById("matches-list");
+      list.innerHTML = matches.length ? matches.map(match => {
+        const time = match.matchTime?.toDate ? match.matchTime.toDate().toLocaleString("zh-TW", { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit", hour12:false }) : "時間未定";
+        return `<button onclick="selectMatch('${escapeHtml(match.id)}')" class="w-full text-left bg-slate-900 border border-slate-700 rounded-xl p-3">
+          <div class="text-xs text-slate-400">${escapeHtml(time)}｜${escapeHtml(match.venue || "未指定")}｜${escapeHtml(match.groupId || match.roundName || "賽事")}</div>
+          <div class="font-black mt-1">${escapeHtml(match.teamA_name || "待定")} VS ${escapeHtml(match.teamB_name || "待定")}</div>
+        </button>`;
+      }).join("") : '<div class="text-center text-slate-500 py-6 border border-dashed border-slate-700 rounded-xl">目前沒有符合授權的賽程。</div>';
+    }
+
+    // Admin-only management channel. Referees never call this broad query.
+    async function loadAdminMatches() {
+      const region = document.getElementById("region-select").value;
+      const venue = document.getElementById("venue-select").value;
+      const snap = await db.collection("matches").orderBy("matchTime").get();
+      const matches = [];
+      snap.forEach(doc => {
+        const match = { id: doc.id, ...doc.data() };
+        if (!isPublicVisibleScheduleMatch(match)) return;
+        if ((match.region || APP.defaultRegion) !== region) return;
+        if (venue && match.venue !== venue) return;
+        if (match.status === "completed") return;
+        matches.push(match);
+      });
+      return matches;
+    }
+
+    async function loadRefereeMatches() {
+      const profile = currentUserProfile;
+      const scopePairs = refereeScopePairs(profile);
+      const queryPromises = [];
+      scopePairs.forEach(scope => {
+        profile.assignedVenues.forEach(assignedVenue => {
+          NATIONAL_CATEGORIES.forEach(categoryValue => {
+            queryPromises.push(
+              db.collection("matches")
+                .where("eventYear", "==", TARGET_EVENT_YEAR)
+                .where("eventName", "==", TARGET_EVENT_NAME)
+                .where("region", "==", scope.region)
+                .where("stage", "==", scope.stage)
+                .where("venue", "==", assignedVenue)
+                .where("category", "==", categoryValue)
+                .where("scheduleStatus", "==", "published")
+                .where("publicVisible", "==", true)
+                .where("schemaVersion", "==", TARGET_SCHEMA_VERSION)
+                .orderBy("matchTime")
+                .get()
+            );
+          });
+        });
+      });
+
+      const snapshots = await Promise.all(queryPromises);
+      const matchesById = new Map();
+      snapshots.forEach(snapshot => {
+        snapshot.forEach(doc => {
+          if (!matchesById.has(doc.id)) {
+            matchesById.set(doc.id, { id: doc.id, ...doc.data() });
+          }
+        });
+      });
+      return Array.from(matchesById.values()).sort((a, b) => matchTimeMillis(a) - matchTimeMillis(b));
+    }
+
+    async function loadMatches() {
+      const selectedRegion = document.getElementById("region-select").value;
+      const selectedVenue = document.getElementById("venue-select").value;
+      const list = document.getElementById("matches-list");
+      list.innerHTML = '<div class="text-center text-slate-500 py-6">讀取中...</div>';
+      try {
+        const matches = currentUserRole === "referee"
+          ? await loadRefereeMatches()
+          : await loadAdminMatches();
+        renderRefereeRegionOptions(matches);
+        const activeRegion = document.getElementById("region-select").value;
+        const regionFilter = currentUserRole === "referee" ? activeRegion : selectedRegion;
+        const visibleMatches = matches.filter(match =>
+          (!regionFilter || match.region === regionFilter)
+          &&
+          (!selectedVenue || match.venue === selectedVenue)
+          && match.status !== "completed"
+        );
+        renderMatches(visibleMatches);
+      } catch (error) {
+        if (error && error.code === "permission-denied") {
+          setMatchListMessage("查詢賽程時權限不足。");
+        } else if (error && (error.code === "failed-precondition" || /index/i.test(error.message || ""))) {
+          setMatchListMessage("查詢賽程需要建立索引，請聯絡系統管理員。");
+        } else {
+          setMatchListMessage("查詢賽程時發生錯誤，請稍後再試。");
+        }
+      }
+    }
+
+    function matchLoadError(message) {
+      const displayMessage = message === "TRAINING_SECOND_SUBMIT_DENIED"
+        ? "此 training 場次已完成，不可再次送出。"
+        : message;
+      document.getElementById("header-match-info").textContent = displayMessage;
+      if (isTrainingMode()) {
+        failClosedScoreboardRoute(displayMessage);
+        return;
+      }
+      alert(displayMessage);
+      showMatchPicker();
+    }
+
+    function updateMatchUrl(id) {
+      if (!id || !window.history || !window.history.replaceState) return;
+      const next = new URL(window.location.href);
+      next.searchParams.set("matchId", id);
+      next.searchParams.delete("id");
+      window.history.replaceState(null, "", `${next.pathname}?${next.searchParams.toString()}`);
+    }
+
+    async function selectMatch(id, options = {}) {
+      if (isPublicScoreboardMode()) return false;
+      const matchId = String(id || "").trim();
+      if (!matchId) {
+        if (options.showError) matchLoadError("無法載入指定比賽資料，請確認 matchId 是否正確。");
+        return false;
+      }
+      let doc;
+      try {
+        doc = await scoreboardCollection("matchCollection").doc(matchId).get();
+      } catch (error) {
+        if (options.showError !== false) {
+          matchLoadError(error && error.code === "permission-denied"
+            ? "此帳號未被授權操作此場比賽。"
+            : "無法載入指定比賽資料，請確認 matchId 是否正確。");
+        }
+        return false;
+      }
+      if (!doc.exists) {
+        if (options.showError !== false) matchLoadError("找不到指定比賽資料。");
+        return false;
+      }
+      currentMatch = { id: doc.id, ...doc.data() };
+      let trainingReport = null;
+      if (isTrainingMode()) {
+        if (!isNationalTrainingMatch(currentMatch)) {
+          currentMatch = null;
+          state.matchId = "";
+          if (options.showError !== false) matchLoadError("指定資料不是有效的 National training 場次。");
+          return false;
+        }
+        if (currentUserRole === "referee" && !isRefereeAccessibleTrainingMatch(currentMatch)) {
+          currentMatch = null;
+          state.matchId = "";
+          if (options.showError !== false) matchLoadError("此 training 場次不在目前裁判授權範圍內。");
+          return false;
+        }
+        try {
+          trainingReport = await scoreboardReportRef(matchId).get();
+        } catch (error) {
+          if (options.showError !== false) matchLoadError(error && error.code === "permission-denied"
+            ? "此帳號未被授權讀取 training 報告。"
+            : "無法讀取 training 報告。");
+          return false;
+        }
+        if (currentMatch.status === "completed"
+          || currentMatch.resultStatus === "reported"
+          || trainingReport.exists) {
+          const denial = new Error("TRAINING_SECOND_SUBMIT_DENIED");
+          currentMatch = null;
+          state.matchId = "";
+          if (options.showError !== false) matchLoadError(denial.message);
+          return false;
+        }
+      }
+      const canOpenCurrentMatch = isTrainingMode()
+        ? ["scheduled", "in_progress"].includes(currentMatch.status)
+        : currentUserRole === "referee"
+          ? isRefereeAccessibleMatch(currentMatch)
+          : isPublicVisibleScheduleMatch(currentMatch);
+      if (!canOpenCurrentMatch) {
+        currentMatch = null;
+        state.matchId = "";
+        if (options.showError !== false) matchLoadError("此場次尚未發布或已封存，不可在裁判端操作。");
+        return false;
+      }
+      state.matchId = doc.id;
+      const savedProgress = readLocalProgress(doc.id);
+      let config;
+      try {
+        const scoreboardConfig = await loadMatchScoreboardConfig(currentMatch);
+        config = gameConfig(undefined, scoreboardConfig);
+      } catch (error) {
+        console.error("unable to resolve match scoreboard configuration", error);
+        currentMatch = null;
+        state.matchId = "";
+        if (options.showError !== false) matchLoadError("本場記分賽制設定無效或無法讀取，已停止載入；請聯絡管理員。 ");
+        return false;
+      }
+      state.red.teamId = currentMatch.teamA_id || null;
+      state.blue.teamId = currentMatch.teamB_id || null;
+      state.red.name = currentMatch.teamA_name || "紅方";
+      state.blue.name = currentMatch.teamB_name || "藍方";
+      document.getElementById("red-name").value = state.red.name;
+      document.getElementById("blue-name").value = state.blue.name;
+      resetMatchForMode(config, { newMatch: true });
+      state.matchId = currentMatch.id;
+      document.getElementById("header-match-info").textContent = `${currentMatch.venue || ""}｜${currentMatch.groupId || currentMatch.roundName || ""}`;
+      applyLocalProgress(savedProgress);
+      normalizeTeamIdentityMapping();
+      updateDisplay();
+      if (options.updateUrl !== false) updateMatchUrl(currentMatch.id);
+      hideMatchPicker();
+      return true;
+    }
+
+    function validatedScoreboardConfig(value) {
+      return window.NationalFormalMsbConfig.normalizeScoreboardConfig(value);
+    }
+
+    function matchSnapshotScoreboardConfig(match) {
+      const snapshot = match && match.scoreboardConfigSnapshot;
+      if (!snapshot || typeof snapshot !== "object") return null;
+      if (snapshot.schemaVersion !== window.NationalFormalMsbConfig.SCOREBOARD_CONFIG_SCHEMA_VERSION
+        || !snapshot.lockedAt || typeof snapshot.lockedBy !== "string" || !snapshot.lockedBy) {
+        throw new Error("NATIONAL_SCOREBOARD_SNAPSHOT_INVALID");
+      }
+      return validatedScoreboardConfig(snapshot);
+    }
+
+    async function loadMatchScoreboardConfig(match) {
+      if (isPublicScoreboardMode() || isTrainingMode()) return null;
+      const locked = matchSnapshotScoreboardConfig(match);
+      if (locked) return window.NationalFormalMsbConfig.resolveScoreboardConfig({ snapshot: locked });
+      const settingSnapshot = await db.collection("competitionSettings").doc("national_2026").get();
+      if (!settingSnapshot.exists) return window.NationalFormalMsbConfig.resolveScoreboardConfig();
+      const settings = settingSnapshot.data();
+      if (settings.eventYear !== TARGET_EVENT_YEAR || settings.eventName !== TARGET_EVENT_NAME
+        || settings.schemaVersion !== window.NationalFormalMsbConfig.SCOREBOARD_CONFIG_SCHEMA_VERSION) {
+        throw new Error("NATIONAL_SCOREBOARD_SETTINGS_INVALID");
+      }
+      return window.NationalFormalMsbConfig.resolveScoreboardConfig({
+        competitionDefault: settings.scoreboardConfig,
+        hasCompetitionDefault: true
+      });
+    }
+
+    function gameConfig(mode, scoreboardConfig) {
+      const config = window.NationalFormalMsbConfig.gameConfig(mode, scoreboardConfig);
+      if (!isPublicScoreboardMode() || config.warmUpOnly) return config;
+      return { ...config, ends: 4, seconds: selectedEndMinutes * 60 };
+    }
+
+    function applyGameMode(mode) {
+      if (isPublicScoreboardMode() && (!state.isWarmUp || state.timerEverStarted || hasMatchProgress())) {
+        alert("比賽進行後無法變更賽制或每局時間。");
+        return false;
+      }
+      resetMatchForMode(gameConfig(mode));
+      toggleModal("settings-modal", false);
+    }
+
+    function resetMatchForMode(config, options = {}) {
+      if (timer) clearInterval(timer);
+      timer = null;
+      activeSide = null;
+      pausedSide = null;
+      if (timeoutTimer) clearInterval(timeoutTimer);
+      if (penaltyTimer) clearInterval(penaltyTimer);
+      if (breakTimer) clearInterval(breakTimer);
+      timeoutTimer = null;
+      penaltyTimer = null;
+      breakTimer = null;
+      pendingNextEnd = null;
+      state.mode = config.mode;
+      state.competitionFormat = config.competitionFormat;
+      state.endSeconds = config.seconds;
+      state.totalEnds = config.ends;
+      state.modeLabel = config.label;
+      state.warmUpOnly = !!config.warmUpOnly;
+      state.reportSubmitted = false;
+      state.localReport = null;
+      state.localResultSummary = null;
+      state.isWarmUp = true;
+      state.currentEnd = 1;
+      state.red.score = 0;
+      state.blue.score = 0;
+      state.red.timeLeft = WARM_UP_SECONDS;
+      state.blue.timeLeft = WARM_UP_SECONDS;
+      state.red.balls = 0;
+      state.blue.balls = 0;
+      state.red.timerStarts = 0;
+      state.blue.timerStarts = 0;
+      pausedSide = null;
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.red.penaltiesAwardedThisEnd = 0;
+      state.blue.penaltiesAwardedThisEnd = 0;
+      state.red.penaltiesScoredThisEnd = 0;
+      state.blue.penaltiesScoredThisEnd = 0;
+      state.red.bnp = 0;
+      state.blue.bnp = 0;
+      state.endHistory = [];
+      state.endReports = [];
+      state.timeoutHistory = [];
+      state.penaltyHistory = [];
+      state.violations = [];
+      state.tieBreak = { required: false, active: false, starter: null, winner: null, count: 0, score: { red: 0, blue: 0 } };
+      state.matchApproval = { redPlayer: false, bluePlayer: false, referee: false };
+      state.jackOwnerOverride = null;
+      state.firstPenaltySide = null;
+      state.violationTargetSide = null;
+      state.endStartScores = { red: 0, blue: 0 };
+      resetPenaltyState();
+      state.endStarted = false;
+      if (options.newMatch) {
+        state.colorLocked = false;
+        state.timerEverStarted = false;
+        state.warmUpEverStarted = false;
+        state.colorMappingInvalid = false;
+      }
+      updateDisplay();
+    }
+
+    function canonicalTeamIdForSide(side) {
+      if (side !== "red" && side !== "blue") return "";
+      const mappedId = state[side] && state[side].teamId;
+      if (mappedId) return String(mappedId);
+      if (typeof currentMatch === "undefined" || !currentMatch) return "";
+      return String(side === "red" ? (currentMatch.teamA_id || "") : (currentMatch.teamB_id || ""));
+    }
+
+    function normalizeTeamIdentityMapping() {
+      if (!currentMatch) return;
+      const teamAId = String(currentMatch.teamA_id || "");
+      const teamBId = String(currentMatch.teamB_id || "");
+      let redId = String(state.red.teamId || "");
+      let blueId = String(state.blue.teamId || "");
+      if (!redId && !blueId) {
+        state.red.teamId = teamAId || null;
+        state.blue.teamId = teamBId || null;
+        state.red.name = currentMatch.teamA_name || state.red.name;
+        state.blue.name = currentMatch.teamB_name || state.blue.name;
+        redId = teamAId;
+        blueId = teamBId;
+      }
+      state.colorMappingInvalid = !(teamAId && teamBId && teamAId !== teamBId
+        && redId && blueId && redId !== blueId
+        && [redId, blueId].every(id => id === teamAId || id === teamBId));
+      const redInput = document.getElementById("red-name");
+      const blueInput = document.getElementById("blue-name");
+      if (redInput) redInput.value = state.red.name;
+      if (blueInput) blueInput.value = state.blue.name;
+      return !state.colorMappingInvalid;
+    }
+
+    function isCanonicalSideAssignmentValid() {
+      if (!currentMatch) return false;
+      const teamAId = String(currentMatch.teamA_id || "");
+      const teamBId = String(currentMatch.teamB_id || "");
+      const redId = String(state.red.teamId || "");
+      const blueId = String(state.blue.teamId || "");
+      return !!teamAId && !!teamBId && teamAId !== teamBId
+        && redId !== blueId
+        && ((redId === teamAId && blueId === teamBId)
+          || (redId === teamBId && blueId === teamAId));
+    }
+
+    function hasMatchProgress() {
+      if (!state) return false;
+      const isNonZero = value => Number.isFinite(Number(value)) && Number(value) !== 0;
+      const isPositive = value => Number.isFinite(Number(value)) && Number(value) > 0;
+      const sideHasProgress = side => {
+        const value = state[side] || {};
+        return isNonZero(value.score)
+          || isPositive(value.balls)
+          || isPositive(value.timerStarts)
+          || isPositive(value.penalties)
+          || isPositive(value.penaltiesAwardedThisEnd)
+          || isPositive(value.penaltiesScoredThisEnd)
+          || isPositive(value.bnp)
+          || isPositive(WARM_UP_SECONDS - Number(value.timeLeft));
+      };
+      return !!(state.warmUpEverStarted || state.timerEverStarted || state.endStarted
+        || !state.isWarmUp || sideHasProgress("red") || sideHasProgress("blue")
+        || (Array.isArray(state.endHistory) && state.endHistory.length)
+        || (Array.isArray(state.endReports) && state.endReports.length)
+        || (Array.isArray(state.violations) && state.violations.length)
+        || (Array.isArray(state.penaltyHistory) && state.penaltyHistory.length)
+        || (Array.isArray(state.timeoutHistory) && state.timeoutHistory.length)
+        || !!(state.tieBreak && (state.tieBreak.active || state.tieBreak.required || state.tieBreak.winner
+          || isPositive(state.tieBreak.count) || isNonZero(state.tieBreak.score?.red) || isNonZero(state.tieBreak.score?.blue)))
+        || !!(penaltyState && (penaltyState.active || penaltyState.running))
+        || activeSide !== null);
+    }
+
+    function markTimerEverStarted(options = {}) {
+      state.timerEverStarted = true;
+      if (options.warmUp) state.warmUpEverStarted = true;
+      const persisted = saveLocalProgress();
+      renderColorAssignmentControls();
+      return persisted;
+    }
+
+    function confirmTeamColors() {
+      if (!currentMatch || !isCanonicalSideAssignmentValid() || state.colorMappingInvalid) {
+        alert("紅藍方隊伍對應異常，無法確認顏色；請重新載入場次並聯絡管理員。 ");
+        return false;
+      }
+      if (state.colorLocked) return true;
+      state.colorLocked = true;
+      if (!saveLocalProgress()) {
+        state.colorLocked = false;
+        renderColorAssignmentControls();
+        alert("無法安全保存顏色確認狀態，請確認瀏覽器儲存空間後再確認。");
+        return false;
+      }
+      updateDisplay();
+      return true;
+    }
+
+    function renderColorAssignmentControls() {
+      const banner = document.getElementById("color-assignment-banner");
+      const confirmButton = document.getElementById("confirm-colors-btn");
+      const swapButton = document.getElementById("swap-team-colors-btn");
+      const status = document.getElementById("color-assignment-status");
+      const valid = isCanonicalSideAssignmentValid() && !state.colorMappingInvalid;
+      const progressed = hasMatchProgress();
+      if (banner) banner.classList.toggle("hidden", !!currentMatch && state.colorLocked);
+      if (confirmButton) confirmButton.disabled = !currentMatch || !valid || state.colorLocked;
+      if (swapButton) swapButton.disabled = !currentMatch || !valid || state.colorLocked || progressed;
+      if (status) {
+        status.textContent = !currentMatch
+          ? "請先選擇場次並核對紅、藍方。"
+          : !valid
+            ? "紅藍方隊伍對應異常，已停用換色與送出。"
+            : state.colorLocked
+              ? `顏色已確認：紅方 ${state.red.name}／藍方 ${state.blue.name}；本場不可再交換。`
+              : progressed
+                ? `本場已開始：紅方 ${state.red.name}／藍方 ${state.blue.name}；進度存在，已禁止換色。`
+                : `待確認：紅方 ${state.red.name}／藍方 ${state.blue.name}`;
+      }
+    }
+
+    function canonicalTeamIdForSideAtSnapshot(report, side) {
+      const snapshotId = report && report[`${side}TeamId`];
+      return snapshotId ? String(snapshotId) : canonicalTeamIdForSide(side);
+    }
+
+    function sideForTeamId(teamId) {
+      const id = String(teamId || "");
+      if (id && id === canonicalTeamIdForSide("red")) return "red";
+      if (id && id === canonicalTeamIdForSide("blue")) return "blue";
+      return "";
+    }
+
+    function canonicalRegularScoreTotals() {
+      const totals = { teamA: 0, teamB: 0 };
+      const teamAId = String(currentMatch?.teamA_id || "");
+      const teamBId = String(currentMatch?.teamB_id || "");
+      const reports = state.endReports.filter(report => report && report.type === "end");
+      if (!reports.length) {
+        const scores = regularScoreTotals();
+        const redId = canonicalTeamIdForSide("red");
+        const blueId = canonicalTeamIdForSide("blue");
+        if (redId === teamAId) totals.teamA += Number(scores.red) || 0;
+        if (redId === teamBId) totals.teamB += Number(scores.red) || 0;
+        if (blueId === teamAId) totals.teamA += Number(scores.blue) || 0;
+        if (blueId === teamBId) totals.teamB += Number(scores.blue) || 0;
+        return totals;
+      }
+      reports.forEach(report => {
+        const redId = String(report.redTeamId || canonicalTeamIdForSide("red"));
+        const blueId = String(report.blueTeamId || canonicalTeamIdForSide("blue"));
+        const redScore = Number(report.red?.endScore) || 0;
+        const blueScore = Number(report.blue?.endScore) || 0;
+        if (redId === teamAId) totals.teamA += redScore;
+        if (redId === teamBId) totals.teamB += redScore;
+        if (blueId === teamAId) totals.teamA += blueScore;
+        if (blueId === teamBId) totals.teamB += blueScore;
+      });
+      return totals;
+    }
+
+    function swapTeamColors() {
+      if (state.colorLocked || hasMatchProgress() || !isCanonicalSideAssignmentValid() || state.colorMappingInvalid) {
+        alert(state.colorLocked
+          ? "顏色已確認，本場比賽不得再交換。"
+          : "本場已有進度或紅藍方對應異常，不得交換顏色。");
+        return false;
+      }
+      const redInput = document.getElementById("red-name");
+      const blueInput = document.getElementById("blue-name");
+      const redName = state.red.name;
+      const blueName = state.blue.name;
+      const redTeamId = state.red.teamId;
+      state.red.teamId = state.blue.teamId;
+      state.blue.teamId = redTeamId;
+      if (redInput) redInput.value = blueName;
+      if (blueInput) blueInput.value = redName;
+      state.red.name = blueName;
+      state.blue.name = redName;
+      toggleModal("settings-modal", false);
+      updateDisplay();
+      return true;
+    }
+
+    function adjustScore(side, delta) {
+      if (state.isWarmUp) return;
+      if (state.tieBreak.active) {
+        state.tieBreak.score[side] = Math.max(0, state.tieBreak.score[side] + delta);
+      } else {
+        const endStartScore = Number(state.endStartScores[side]);
+        const minimum = Number.isFinite(endStartScore) ? Math.max(0, endStartScore) : 0;
+        state[side].score = Math.max(minimum, state[side].score + delta);
+      }
+      state.endStarted = true;
+      updateDisplay();
+    }
+
+    function currentRegularEndScores() {
+      if (state.isWarmUp || state.tieBreak.active) return { red: 0, blue: 0 };
+      const redStart = Number(state.endStartScores.red) || 0;
+      const blueStart = Number(state.endStartScores.blue) || 0;
+      return {
+        red: Math.max(0, (Number(state.red.score) || 0) - redStart),
+        blue: Math.max(0, (Number(state.blue.score) || 0) - blueStart)
+      };
+    }
+
+    function currentRegularEndScoreRecorded() {
+      const scores = currentRegularEndScores();
+      return scores.red > 0 || scores.blue > 0;
+    }
+
+    function regularEndScoreGuardMessage(endNumbers, finalSubmit = false) {
+      const numbers = Array.from(new Set((endNumbers || []).map(Number)))
+        .filter(Number.isInteger)
+        .sort((left, right) => left - right);
+      if (!numbers.length) return "";
+      if (finalSubmit) return `尚有未完成的局數：${numbers.map(end => `第 ${end} 局`).join("、")}。`;
+      return `第 ${numbers[0]} 局尚未記錄比分，請先完成本局記分。`;
+    }
+
+    function guardCurrentRegularEndScore() {
+      if (state.tieBreak.active || state.isWarmUp) return true;
+      if (currentRegularEndScoreRecorded()) return true;
+      alert(regularEndScoreGuardMessage([Number(state.currentEnd)]));
+      return false;
+    }
+
+    function adjustPenalty(side, delta) {
+      if (state.isWarmUp) return;
+      if (delta > 0 && state.red.penalties === 0 && state.blue.penalties === 0) {
+        state.firstPenaltySide = side;
+      }
+      const before = state[side].penalties;
+      state[side].penalties = Math.max(0, state[side].penalties + delta);
+      const actualDelta = state[side].penalties - before;
+      if (actualDelta > 0) {
+        state[side].penaltiesAwardedThisEnd += actualDelta;
+      } else if (actualDelta < 0) {
+        state[side].penaltiesAwardedThisEnd = Math.max(state[side].penaltiesScoredThisEnd, state[side].penaltiesAwardedThisEnd + actualDelta);
+      }
+      if (state.red.penalties === 0 && state.blue.penalties === 0) {
+        state.firstPenaltySide = null;
+      } else if (!state.firstPenaltySide && state[side].penalties > 0) {
+        state.firstPenaltySide = side;
+      }
+      state.endStarted = true;
+      updateDisplay();
+    }
+
+    function adjustBnp(side, delta) {
+      if (state.isWarmUp) return;
+      state[side].bnp = Math.max(0, state[side].bnp + delta);
+      syncCurrentReportBnp(side);
+      state.endStarted = true;
+      updateDisplay();
+      if (!document.getElementById("report-modal").classList.contains("hidden")) {
+        renderReport();
+      }
+      if (!document.getElementById("result-modal").classList.contains("hidden")) {
+        renderReport("match-report-content");
+      }
+    }
+
+    function syncCurrentReportBnp(side) {
+      const key = String(currentEndKey());
+      const report = state.endReports.find(item => String(item.end) === key);
+      if (report && report[side]) report[side].bnp = state[side].bnp;
+    }
+
+    function toggleBall(side, index) {
+      if (state.isWarmUp) return;
+      state[side].balls = index < state[side].balls ? index : index + 1;
+      syncTimerStartsFromBalls(side);
+      state.endStarted = true;
+      updateDisplay();
+    }
+
+    function adjustSideTime(side, deltaSeconds) {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp && state.warmUpType === "simultaneous") {
+        state.red.timeLeft = adjustTimeSeconds(state.red.timeLeft, deltaSeconds);
+        state.blue.timeLeft = adjustTimeSeconds(state.blue.timeLeft, deltaSeconds);
+      } else {
+        state[side].timeLeft = adjustTimeSeconds(state[side].timeLeft, deltaSeconds);
+      }
+      state.endStarted = true;
+      if (activeSide === "both") {
+        if (state.red.timeLeft <= 0 && state.blue.timeLeft <= 0) pauseTimer();
+      } else if (activeSide === side && state[side].timeLeft <= 0) {
+        pauseTimer();
+      }
+      updateDisplay();
+    }
+
+    function adjustTimeSeconds(currentSeconds, deltaSeconds) {
+      const current = Math.max(0, Number(currentSeconds) || 0);
+      const delta = Number(deltaSeconds) || 0;
+      return Math.max(0, current + delta);
+    }
+
+    function activateSide(side) {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return activateWarmUpTimer();
+      if (activeSide === side) return pauseTimer();
+      pauseTimer();
+      const priorEndStarted = state.endStarted;
+      activeSide = side;
+      pausedSide = null;
+      state.endStarted = true;
+      if (!markTimerEverStarted()) {
+        activeSide = null;
+        state.endStarted = priorEndStarted;
+        alert("無法安全保存本機進度，計時器未啟動。請確認瀏覽器儲存空間後再試。");
+        return false;
+      }
+      recordThrowForSide(side);
+      timer = setInterval(() => {
+        state[side].timeLeft = Math.max(0, state[side].timeLeft - 1);
+        updateDisplay();
+        if (state[side].timeLeft <= 0) pauseTimer();
+      }, 1000);
+      updateDisplay();
+    }
+
+    function recordThrowForSide(side) {
+      if (state.isWarmUp) return;
+      const isOpeningJackThrow = side === getJackOwner() && state[side].timerStarts === 0;
+      state[side].timerStarts += 1;
+      if (!isOpeningJackThrow) {
+        state[side].balls = Math.min(6, state[side].balls + 1);
+      }
+    }
+
+    function activateWarmUpTimer() {
+      if (activeSide === "both") return pauseTimer();
+      pauseTimer();
+      activeSide = "both";
+      pausedSide = null;
+      if (!markTimerEverStarted({ warmUp: true })) {
+        activeSide = null;
+        alert("無法安全保存本機進度，暖身計時器未啟動。請確認瀏覽器儲存空間後再試。");
+        return false;
+      }
+      timer = setInterval(() => {
+        state.red.timeLeft = Math.max(0, state.red.timeLeft - 1);
+        state.blue.timeLeft = Math.max(0, state.blue.timeLeft - 1);
+        updateDisplay();
+        if (state.red.timeLeft <= 0 && state.blue.timeLeft <= 0) {
+          pauseTimer();
+          alert("暖身時間結束。");
+        }
+      }, 1000);
+      updateDisplay();
+    }
+
+    function pauseTimer() {
+      const paused = activeSide;
+      if (timer) clearInterval(timer);
+      timer = null;
+      activeSide = null;
+      pausedSide = paused === "red" || paused === "blue" ? paused : null;
+      updateDisplay();
+    }
+
+    function nextEnd() {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return startMatchFromWarmUp();
+      if (!guardCurrentRegularEndScore()) return;
+      if (hasPendingPenalties()) return startPenaltyPhase("nextEnd");
+      continueNextEndFlow();
+    }
+
+    function continueNextEndFlow() {
+      if (state.tieBreak.active) return continueTieBreakFlow();
+      if (!guardCurrentRegularEndScore()) return;
+      recordEnd();
+      upsertEndReport(state.currentEnd);
+      if (state.currentEnd < state.totalEnds) {
+        startBreak(Number(state.currentEnd) + 1);
+      } else if (state.red.score === state.blue.score) {
+        state.tieBreak.required = true;
+        toggleModal("tie-modal", true);
+      } else {
+        endMatch();
+      }
+    }
+
+    function continueTieBreakFlow() {
+      if (state.tieBreak.score.red === state.tieBreak.score.blue) {
+        state.tieBreak.winner = null;
+        upsertEndReport(currentEndKey());
+        state.tieBreak.count = nextTieBreakCount(state.tieBreak.count);
+        state.tieBreak.score = { red: 0, blue: 0 };
+        state.tieBreak.starter = null;
+        state.currentEnd = `TB ${state.tieBreak.count}`;
+        state.red.timeLeft = state.endSeconds;
+        state.blue.timeLeft = state.endSeconds;
+        state.red.balls = 0;
+        state.blue.balls = 0;
+        state.red.timerStarts = 0;
+        state.blue.timerStarts = 0;
+        pausedSide = null;
+        clearCurrentEndLocalRecords();
+        toggleModal("tie-modal", true);
+        updateDisplay();
+        return;
+      }
+      state.tieBreak.winner = state.tieBreak.score.red > state.tieBreak.score.blue ? "red" : "blue";
+      upsertEndReport(currentEndKey());
+      endMatch();
+    }
+
+    function hasPendingPenalties() {
+      return state.red.penalties > 0 || state.blue.penalties > 0;
+    }
+
+    async function persistScoreboardSnapshotAtStart() {
+      if (isPublicScoreboardMode() || isTrainingMode()) return null;
+      if (!currentMatch || !currentMatch.id || !db || !currentUser) throw new Error("MATCH_START_CONTEXT_MISSING");
+      const matchRef = db.collection("matches").doc(String(currentMatch.id));
+      const settingsRef = db.collection("competitionSettings").doc("national_2026");
+      let resolvedConfig = null;
+      let resolvedSnapshot = null;
+      await db.runTransaction(async transaction => {
+        const matchSnapshot = await transaction.get(matchRef);
+        if (!matchSnapshot.exists) throw new Error("MATCH_NOT_FOUND");
+        const latestMatch = matchSnapshot.data();
+        if (String(latestMatch.teamA_id || "") !== String(currentMatch.teamA_id || "")
+          || String(latestMatch.teamB_id || "") !== String(currentMatch.teamB_id || "")
+          || latestMatch.scheduleStatus !== "published"
+          || latestMatch.publicVisible !== true
+          || latestMatch.status !== "scheduled"
+          || (latestMatch.resultStatus && latestMatch.resultStatus !== "pending")) {
+          throw new Error("MATCH_NOT_STARTABLE");
+        }
+        const existingSnapshot = matchSnapshotScoreboardConfig(latestMatch);
+        if (existingSnapshot) {
+          resolvedConfig = existingSnapshot;
+          resolvedSnapshot = latestMatch.scoreboardConfigSnapshot;
+          return;
+        }
+        const settingsSnapshot = await transaction.get(settingsRef);
+        if (settingsSnapshot.exists) {
+          const settings = settingsSnapshot.data();
+          if (settings.eventYear !== TARGET_EVENT_YEAR || settings.eventName !== TARGET_EVENT_NAME
+            || settings.schemaVersion !== window.NationalFormalMsbConfig.SCOREBOARD_CONFIG_SCHEMA_VERSION) {
+            throw new Error("NATIONAL_SCOREBOARD_SETTINGS_INVALID");
+          }
+          resolvedConfig = window.NationalFormalMsbConfig.resolveScoreboardConfig({
+            competitionDefault: settings.scoreboardConfig,
+            hasCompetitionDefault: true
+          });
+        } else {
+          resolvedConfig = window.NationalFormalMsbConfig.resolveScoreboardConfig();
+        }
+        const lockedAt = scoreboardTimestamp();
+        resolvedSnapshot = {
+          ...resolvedConfig,
+          schemaVersion: window.NationalFormalMsbConfig.SCOREBOARD_CONFIG_SCHEMA_VERSION,
+          lockedAt,
+          lockedBy: currentUser.uid
+        };
+        transaction.update(matchRef, {
+          scoreboardConfigSnapshot: resolvedSnapshot,
+          updatedAt: lockedAt
+        });
+      });
+      return { config: resolvedConfig, snapshot: resolvedSnapshot };
+    }
+
+    async function startMatchFromWarmUp() {
+      if (state.warmUpOnly) {
+        alert("目前為僅計時暖身模式，不進入正規局。");
+        return;
+      }
+      if (!state.colorLocked || !isCanonicalSideAssignmentValid() || state.colorMappingInvalid) {
+        alert("請先核對紅藍隊伍與檢錄結果，按「確認顏色」後才能開始比賽。");
+        return false;
+      }
+      let startConfig = null;
+      try {
+        startConfig = await persistScoreboardSnapshotAtStart();
+      } catch (error) {
+        console.error("scoreboard configuration snapshot failed; match remains unstarted", error);
+        alert("無法安全鎖定本場賽制設定，比賽尚未開始，請確認連線後再試。 ");
+        return false;
+      }
+      if (startConfig) {
+        state.totalEnds = startConfig.config.regularEnds;
+        state.endSeconds = startConfig.config.endDurationSeconds;
+        currentMatch.scoreboardConfigSnapshot = startConfig.snapshot;
+      }
+      pauseTimer();
+      state.isWarmUp = false;
+      state.currentEnd = 1;
+      state.red.timeLeft = state.endSeconds;
+      state.blue.timeLeft = state.endSeconds;
+      state.red.balls = 0;
+      state.blue.balls = 0;
+      state.red.timerStarts = 0;
+      state.blue.timerStarts = 0;
+      pausedSide = null;
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.jackOwnerOverride = null;
+      state.firstPenaltySide = null;
+      state.endStartScores = { red: state.red.score, blue: state.blue.score };
+      clearCurrentEndLocalRecords();
+      state.endStarted = false;
+      updateDisplay();
+    }
+
+    function resetCurrentEnd(keepScore) {
+      pauseTimer();
+      const resetSeconds = state.isWarmUp ? WARM_UP_SECONDS : state.endSeconds;
+      state.red.timeLeft = resetSeconds;
+      state.blue.timeLeft = resetSeconds;
+      state.red.balls = 0;
+      state.blue.balls = 0;
+      state.red.timerStarts = 0;
+      state.blue.timerStarts = 0;
+      pausedSide = null;
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.jackOwnerOverride = null;
+      state.firstPenaltySide = null;
+      clearCurrentEndLocalRecords();
+      state.endStarted = false;
+      if (!keepScore) resetCurrentEndScoreToStart();
+      state.endStartScores = { red: state.red.score, blue: state.blue.score };
+      updateDisplay();
+    }
+
+    function confirmResetCurrentEnd() {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (confirm("確定重設本局？只會清除本局的計時、球數、罰球與本局比分，前面已完成局數會保留。")) {
+        resetCurrentEnd(false);
+      }
+    }
+
+    function resetCurrentEndScoreToStart() {
+      if (state.tieBreak.active) {
+        const regularEnds = state.endHistory.filter(item => item.type === "end");
+        const lastEnd = regularEnds.length ? regularEnds[regularEnds.length - 1] : null;
+        state.red.score = lastEnd ? lastEnd.redTotal : 0;
+        state.blue.score = lastEnd ? lastEnd.blueTotal : 0;
+        state.tieBreak.winner = null;
+        state.endHistory = state.endHistory.filter(item => item.type !== "tieBreak");
+        return;
+      }
+      const currentEndNumber = Number(state.currentEnd);
+      const recordedEnds = state.endHistory.filter(item => item.type === "end" && item.end < currentEndNumber);
+      const prev = recordedEnds.length ? recordedEnds[recordedEnds.length - 1] : null;
+      state.red.score = prev ? prev.redTotal : 0;
+      state.blue.score = prev ? prev.blueTotal : 0;
+      state.endHistory = state.endHistory.filter(item => item.type !== "end" || item.end < currentEndNumber);
+    }
+
+    function currentEndKey() {
+      if (state.tieBreak.active) return `TB ${state.tieBreak.count}`;
+      return state.isWarmUp ? "warmup" : state.currentEnd;
+    }
+
+    function clearCurrentEndLocalRecords() {
+      const key = currentEndKey();
+      state.violations = state.violations.filter(item => item.end !== key);
+      state.red.penaltiesAwardedThisEnd = 0;
+      state.blue.penaltiesAwardedThisEnd = 0;
+      state.red.penaltiesScoredThisEnd = 0;
+      state.blue.penaltiesScoredThisEnd = 0;
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.firstPenaltySide = null;
+      state.red.bnp = 0;
+      state.blue.bnp = 0;
+    }
+
+    function recordEnd() {
+      if (!currentMatch) return;
+      if (state.tieBreak.active) {
+        state.endHistory.push({
+          type: "tieBreak",
+          label: `TB ${state.tieBreak.count}`,
+          starter: state.tieBreak.starter,
+          winner: state.tieBreak.winner,
+          redTotal: state.red.score,
+          blueTotal: state.blue.score,
+          redTeamId: canonicalTeamIdForSide("red"),
+          blueTeamId: canonicalTeamIdForSide("blue")
+        });
+        return;
+      }
+      const recordedEnds = state.endHistory.filter(item => item.type === "end");
+      const prev = recordedEnds.length ? recordedEnds[recordedEnds.length - 1] : null;
+      const prevRed = prev ? prev.redTotal : 0;
+      const prevBlue = prev ? prev.blueTotal : 0;
+      state.endHistory[state.currentEnd - 1] = {
+        type: "end",
+        end: state.currentEnd,
+        redScore: state.red.score - prevRed,
+        blueScore: state.blue.score - prevBlue,
+        redTotal: state.red.score,
+        blueTotal: state.blue.score,
+        redBallsPlayed: state.red.balls,
+        blueBallsPlayed: state.blue.balls,
+        redPenalties: state.red.penalties,
+        bluePenalties: state.blue.penalties,
+        jackOwner: getJackOwner(),
+        redTeamId: canonicalTeamIdForSide("red"),
+        blueTeamId: canonicalTeamIdForSide("blue")
+      };
+    }
+
+    function upsertEndReport(endNumber) {
+      if (state.isWarmUp || endNumber === "TB") return;
+      const isTieBreakReport = state.tieBreak.active;
+      const reportEnd = isTieBreakReport ? `TB ${state.tieBreak.count}` : endNumber;
+      const redViolations = state.violations.filter(item => item.side === "red" && item.end === endNumber);
+      const blueViolations = state.violations.filter(item => item.side === "blue" && item.end === endNumber);
+      const report = {
+        type: isTieBreakReport ? "tieBreak" : "end",
+        end: reportEnd,
+        redTeamId: canonicalTeamIdForSide("red"),
+        blueTeamId: canonicalTeamIdForSide("blue"),
+        red: {
+          timeRemaining: formatTime(state.red.timeLeft),
+          endScore: isTieBreakReport ? state.tieBreak.score.red : state.red.score - state.endStartScores.red,
+          penaltyBallsAwarded: state.red.penaltiesAwardedThisEnd,
+          penaltyBallsScored: state.red.penaltiesScoredThisEnd,
+          bnp: state.red.bnp,
+          violations: redViolations
+        },
+        blue: {
+          timeRemaining: formatTime(state.blue.timeLeft),
+          endScore: isTieBreakReport ? state.tieBreak.score.blue : state.blue.score - state.endStartScores.blue,
+          penaltyBallsAwarded: state.blue.penaltiesAwardedThisEnd,
+          penaltyBallsScored: state.blue.penaltiesScoredThisEnd,
+          bnp: state.blue.bnp,
+          violations: blueViolations
+        },
+        winner: isTieBreakReport ? state.tieBreak.winner : null
+      };
+      const index = state.endReports.findIndex(item => item.end === reportEnd);
+      if (index >= 0) state.endReports[index] = report;
+      else state.endReports.push(report);
+    }
+
+    function hasRecordedCurrentEnd() {
+      return state.endHistory.some(item => item.type === "end" && item.end === state.currentEnd);
+    }
+
+    function hasCompletedRegularEnds() {
+      return window.NationalFormalMsbConfig.hasCompleteRegularEndReports(state.endReports, state.totalEnds);
+    }
+
+    function getJackOwner() {
+      if (state.jackOwnerOverride) return state.jackOwnerOverride;
+      if (state.tieBreak.active) return state.tieBreak.starter || "red";
+      return state.currentEnd % 2 === 1 ? "red" : "blue";
+    }
+
+    function syncTimerStartsFromBalls(side) {
+      if (state.isWarmUp) return;
+      const balls = Math.min(6, Math.max(0, state[side].balls || 0));
+      const isJackOwner = side === getJackOwner();
+      const jackHasStarted = isJackOwner && ((state[side].timerStarts || 0) > 0 || balls > 0);
+      state[side].balls = balls;
+      state[side].timerStarts = isJackOwner && jackHasStarted ? balls + 1 : balls;
+      if (pausedSide === side) pausedSide = null;
+    }
+
+    function toggleJackOwner() {
+      if (state.isWarmUp) return;
+      state.jackOwnerOverride = getJackOwner() === "red" ? "blue" : "red";
+      syncTimerStartsFromBalls("red");
+      syncTimerStartsFromBalls("blue");
+      state.endStarted = true;
+      updateDisplay();
+    }
+
+    function openViolationModal(side) {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      pauseTimer();
+      state.violationTargetSide = side;
+      document.getElementById("violation-title").textContent = `${side === "red" ? "紅隊" : "藍隊"}犯規`;
+      document.getElementById("violation-side-label").textContent = side === "red" ? state.red.name : state.blue.name;
+      renderViolationList();
+      toggleModal("violation-modal", true);
+    }
+
+    function closeViolationModal() {
+      state.violationTargetSide = null;
+      toggleModal("violation-modal", false);
+    }
+
+    function renderViolationList() {
+      const list = document.getElementById("violation-list");
+      list.textContent = "";
+      VIOLATION_GROUPS.forEach(group => {
+        const section = document.createElement("section");
+        const title = document.createElement("h3");
+        title.className = "font-black text-amber-200 mb-2";
+        title.textContent = `${group.title}（${group.type}）｜處罰：${group.sanction}`;
+        section.appendChild(title);
+        const grid = document.createElement("div");
+        grid.className = "grid grid-cols-1 md:grid-cols-2 gap-2";
+        group.items.forEach(item => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "touch-btn text-left bg-slate-950 border border-slate-700 rounded-xl p-3";
+          button.addEventListener("click", () => recordViolation(item, group.type));
+          const header = document.createElement("div");
+          header.className = "flex items-center gap-2 mb-1";
+          const code = createSafeTextElement("span", item.code, "text-amber-200 font-black");
+          const short = createSafeTextElement("span", item.short, "violation-badge");
+          header.appendChild(code);
+          header.appendChild(short);
+          const text = createSafeTextElement("div", item.text, "text-sm text-slate-200");
+          button.appendChild(header);
+          button.appendChild(text);
+          grid.appendChild(button);
+        });
+        section.appendChild(grid);
+        list.appendChild(section);
+      });
+    }
+
+    function recordViolation(item, groupType) {
+      const side = state.violationTargetSide;
+      if (!side) return;
+      const penaltyBalls = violationPenaltyBalls(groupType);
+      state.violations.push({
+        side,
+        teamId: canonicalTeamIdForSide(side),
+        end: currentEndKey(),
+        code: item.code,
+        type: groupType,
+        short: item.short,
+        text: item.text,
+        penaltyBalls,
+        timestamp: Date.now()
+      });
+      applyViolationPenalty(side, penaltyBalls);
+      closeViolationModal();
+      updateDisplay();
+    }
+
+    function violationPenaltyBalls(groupType) {
+      const group = VIOLATION_GROUPS.find(item => item.type === groupType);
+      return group ? Number(group.penaltyBalls) || 0 : 0;
+    }
+
+    function applyViolationPenalty(committingSide, penaltyBalls) {
+      const balls = Math.max(0, Number(penaltyBalls) || 0);
+      if (!balls || (committingSide !== "red" && committingSide !== "blue")) return;
+      const opposingSide = committingSide === "red" ? "blue" : "red";
+      adjustPenalty(opposingSide, balls);
+    }
+
+    function renderViolationBadges(side) {
+      const box = document.getElementById(`${side}-violations`);
+      box.textContent = "";
+      const key = currentEndKey();
+      state.violations
+        .filter(item => item.side === side && item.end === key)
+        .forEach(item => {
+          const badge = createSafeTextElement("span", item.short, "violation-badge");
+          box.appendChild(badge);
+        });
+    }
+
+    function openReportModal() {
+      renderReport();
+      toggleModal("report-modal", true);
+    }
+
+    function formatPenaltyReport(data) {
+      if (!data.penaltyBallsAwarded) return "-";
+      return `${data.penaltyBallsScored}/${data.penaltyBallsAwarded}`;
+    }
+
+    function renderReport(targetId) {
+      const content = document.getElementById(targetId || "report-content");
+      if (!content) return;
+      content.textContent = "";
+      if (isCanonicalSideAssignmentValid()) {
+        const totals = state.endReports.some(report => report && report.type === "end")
+          ? canonicalRegularScoreTotals()
+          : { teamA: 0, teamB: 0 };
+        content.appendChild(createSafeTextElement("div",
+          `顏色對應：紅方 ${teamForSide("red").name}（${canonicalTeamIdForSide("red")}）；藍方 ${teamForSide("blue").name}（${canonicalTeamIdForSide("blue")}）。` +
+          `隊伍總分：${currentMatch.teamA_name || "TEAM_A"} ${totals.teamA}：${currentMatch.teamB_name || "TEAM_B"} ${totals.teamB}`,
+          "mb-3 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200"));
+      }
+      if (!state.endReports.length) {
+        content.appendChild(createSafeTextElement("div", "尚無每局紀錄。", "text-center text-slate-400 py-8"));
+        return;
+      }
+      const table = document.createElement("table");
+      table.className = "report-table";
+      const thead = document.createElement("thead");
+      const headerRow = document.createElement("tr");
+      [`紅方（${teamForSide("red").name || "紅方"}）剩餘時間`, "紅方 BNP", "紅方罰球", "紅方本局得分", "局數", "藍方本局得分", "藍方罰球", "藍方 BNP", `藍方（${teamForSide("blue").name || "藍方"}）剩餘時間`].forEach(label => {
+        const th = document.createElement("th");
+        th.textContent = label;
+        headerRow.appendChild(th);
+      });
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+      const tbody = document.createElement("tbody");
+      state.endReports
+        .slice()
+        .sort((a, b) => String(a.end).localeCompare(String(b.end), "zh-Hant", { numeric: true }))
+        .forEach(report => {
+          const row = document.createElement("tr");
+          [
+            report.red.timeRemaining,
+            String(report.red.bnp),
+            formatPenaltyReport(report.red),
+            String(report.red.endScore),
+            report.winner ? `${report.end}（${report.winner === "red" ? "紅勝" : "藍勝"}）` : String(report.end),
+            String(report.blue.endScore),
+            formatPenaltyReport(report.blue),
+            String(report.blue.bnp),
+            report.blue.timeRemaining
+          ].forEach(value => {
+            const td = document.createElement("td");
+            td.textContent = value;
+            row.appendChild(td);
+          });
+          tbody.appendChild(row);
+        });
+      table.appendChild(tbody);
+      content.appendChild(table);
+      state.endReports.forEach(report => {
+        const wrap = document.createElement("div");
+        wrap.className = "bg-slate-950 border border-slate-700 rounded-xl p-3";
+        const titleText = report.type === "tieBreak" ? `${report.end} 犯規紀錄` : `第 ${report.end} 局犯規紀錄`;
+        const title = createSafeTextElement("div", titleText, "font-black text-slate-200 mb-2");
+        wrap.appendChild(title);
+        appendReportViolations(wrap, "紅方犯規", report.red.violations);
+        appendReportViolations(wrap, "藍方犯規", report.blue.violations);
+        content.appendChild(wrap);
+      });
+    }
+
+    function appendReportViolations(parent, label, violations) {
+      const line = document.createElement("div");
+      line.className = "text-sm text-slate-300 mb-1";
+      const prefix = createSafeTextElement("span", `${label}：`, "font-bold text-slate-400");
+      line.appendChild(prefix);
+      if (!violations.length) {
+        line.appendChild(document.createTextNode("-"));
+      } else {
+        violations.forEach((item, index) => {
+          if (index > 0) line.appendChild(document.createTextNode("；"));
+          const identity = item.teamId ? `（${canonicalTeamNameForId(item.teamId) || item.teamId}）` : "";
+          line.appendChild(document.createTextNode(`${item.code} ${item.short} ${item.text}${identity}`));
+        });
+      }
+      parent.appendChild(line);
+    }
+
+    function startBreak(nextEndNumber) {
+      pauseTimer();
+      pendingNextEnd = nextEndNumber;
+      breakTimeLeft = 60;
+      document.getElementById("break-info").textContent = `準備第 ${nextEndNumber} 局`;
+      document.getElementById("break-clock").textContent = String(breakTimeLeft);
+      document.getElementById("break-start-btn").textContent = "倒數";
+      if (breakTimer) clearInterval(breakTimer);
+      breakTimer = null;
+      toggleModal("break-modal", true);
+    }
+
+    function startBreakCountdown() {
+      if (breakTimer) return;
+      if (!markTimerEverStarted()) {
+        alert("無法安全保存本機進度，休息倒數未啟動。請確認瀏覽器儲存空間後再試。");
+        return false;
+      }
+      document.getElementById("break-start-btn").textContent = "倒數中";
+      breakTimer = setInterval(() => {
+        breakTimeLeft = Math.max(0, breakTimeLeft - 1);
+        document.getElementById("break-clock").textContent = String(breakTimeLeft);
+        if (breakTimeLeft <= 0) finishBreak();
+      }, 1000);
+    }
+
+    function finishBreak() {
+      if (breakTimer) clearInterval(breakTimer);
+      breakTimer = null;
+      if (pendingNextEnd != null) {
+        state.currentEnd = pendingNextEnd;
+        pendingNextEnd = null;
+        resetCurrentEnd(true);
+        state.endStartScores = { red: state.red.score, blue: state.blue.score };
+      }
+      toggleModal("break-modal", false);
+    }
+
+    function startSpecialTimeout(type) {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (!markTimerEverStarted()) {
+        alert("無法安全保存本機進度，暫停計時未啟動。請確認瀏覽器儲存空間後再試。");
+        return false;
+      }
+      toggleModal("settings-modal", false);
+      pauseTimer();
+      const title = type === "medical" ? "醫療暫停" : "技術暫停";
+      document.getElementById("timeout-title").textContent = title;
+      let remain = 600;
+      document.getElementById("timeout-clock").textContent = formatTime(remain);
+      state.timeoutHistory.push({ type, label: title, startedAt: new Date().toISOString(), end: state.currentEnd });
+      toggleModal("timeout-modal", true);
+      timeoutTimer = setInterval(() => {
+        remain -= 1;
+        document.getElementById("timeout-clock").textContent = formatTime(Math.max(0, remain));
+        if (remain <= 0) endSpecialTimeout();
+      }, 1000);
+    }
+
+    function endSpecialTimeout() {
+      if (timeoutTimer) clearInterval(timeoutTimer);
+      timeoutTimer = null;
+      const last = state.timeoutHistory[state.timeoutHistory.length - 1];
+      if (last && !last.endedAt) last.endedAt = new Date().toISOString();
+      toggleModal("timeout-modal", false);
+    }
+
+    function startPenaltyPhase(afterCompleteAction) {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return alert("暖身期間不執行罰球。");
+      toggleModal("settings-modal", false);
+      const side = chooseNextPenaltySide(null);
+      if (!side) return alert("請先在紅方或藍方增加罰球數。");
+      penaltyState.active = true;
+      penaltyState.afterCompleteAction = afterCompleteAction || null;
+      penaltyState.lastSide = null;
+      setupPenalty(side);
+      toggleModal("penalty-modal", true);
+    }
+
+    function setupPenalty(side) {
+      pauseTimer();
+      penaltyState.active = true;
+      penaltyState.side = side;
+      penaltyState.clock = 60;
+      penaltyState.running = false;
+      if (penaltyTimer) clearInterval(penaltyTimer);
+      document.getElementById("penalty-title").textContent = `${side === "red" ? "紅隊" : "藍隊"}投擲`;
+      document.getElementById("penalty-info").textContent = `剩餘 ${state[side].penalties} 球`;
+      document.getElementById("penalty-clock").textContent = "01:00";
+    }
+
+    function togglePenaltyTimer() {
+      if (penaltyState.running) {
+        clearInterval(penaltyTimer);
+        penaltyState.running = false;
+        return;
+      }
+      penaltyState.running = true;
+      if (!markTimerEverStarted()) {
+        penaltyState.running = false;
+        alert("無法安全保存本機進度，罰球計時器未啟動。請確認瀏覽器儲存空間後再試。");
+        return false;
+      }
+      penaltyTimer = setInterval(() => {
+        penaltyState.clock -= 1;
+        document.getElementById("penalty-clock").textContent = formatTime(Math.max(0, penaltyState.clock));
+        if (penaltyState.clock <= 0) {
+          clearInterval(penaltyTimer);
+          penaltyState.running = false;
+        }
+      }, 1000);
+    }
+
+    function penaltyScore() {
+      if (!penaltyState.side) return;
+      state.endStarted = true;
+      adjustScore(penaltyState.side, 1);
+      state[penaltyState.side].penaltiesScoredThisEnd += 1;
+      completePenaltyShot(true);
+    }
+
+    function nextPenaltyShot() {
+      completePenaltyShot(false);
+    }
+
+    function completePenaltyShot(scored) {
+      const side = penaltyState.side;
+      if (!side) return;
+      state.penaltyHistory.push({
+        side,
+        teamId: canonicalTeamIdForSide(side),
+        againstTeamId: canonicalTeamIdForSide(side === "red" ? "blue" : "red"),
+        scored: !!scored,
+        end: state.currentEnd,
+        at: new Date().toISOString()
+      });
+      state[side].penalties = Math.max(0, state[side].penalties - 1);
+      penaltyState.lastSide = side;
+      const nextSide = chooseNextPenaltySide(side);
+      updateDisplay();
+      if (nextSide) setupPenalty(nextSide);
+      else {
+        completePenaltyPhaseAndContinue();
+      }
+    }
+
+    function chooseNextPenaltySide(currentSide) {
+      const redCount = state.red.penalties;
+      const blueCount = state.blue.penalties;
+      if (redCount <= 0 && blueCount <= 0) return null;
+      if (!currentSide && state.firstPenaltySide && state[state.firstPenaltySide].penalties > 0) {
+        return state.firstPenaltySide;
+      }
+      if (currentSide) {
+        const other = currentSide === "red" ? "blue" : "red";
+        if (state[other].penalties > 0) return other;
+        if (state[currentSide].penalties > 0) return currentSide;
+      }
+      if (state.firstPenaltySide && state[state.firstPenaltySide].penalties > 0) return state.firstPenaltySide;
+      return redCount > 0 ? "red" : "blue";
+    }
+
+    function completePenaltyPhaseAndContinue() {
+      if (penaltyTimer) clearInterval(penaltyTimer);
+      penaltyTimer = null;
+      const action = penaltyState.afterCompleteAction;
+      resetPenaltyState();
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.firstPenaltySide = null;
+      toggleModal("penalty-modal", false);
+      updateDisplay();
+      if (action === "nextEnd") continueNextEndFlow();
+    }
+
+    function resetPenaltyState() {
+      if (penaltyTimer) clearInterval(penaltyTimer);
+      penaltyState.active = false;
+      penaltyState.side = null;
+      penaltyState.clock = 60;
+      penaltyState.running = false;
+      penaltyState.lastSide = null;
+      penaltyState.afterCompleteAction = null;
+    }
+
+    function startTieBreak(starter) {
+      const isFirstTieBreak = !state.tieBreak.active;
+      state.tieBreak.active = true;
+      if (isFirstTieBreak) state.tieBreak.count = nextTieBreakCount(state.tieBreak.count);
+      state.tieBreak.starter = starter;
+      state.tieBreak.winner = null;
+      state.tieBreak.score = { red: 0, blue: 0 };
+      state.currentEnd = `TB ${state.tieBreak.count}`;
+      state.red.timeLeft = state.endSeconds;
+      state.blue.timeLeft = state.endSeconds;
+      state.red.balls = 0;
+      state.blue.balls = 0;
+      state.red.timerStarts = 0;
+      state.blue.timerStarts = 0;
+      pausedSide = null;
+      state.red.bnp = 0;
+      state.blue.bnp = 0;
+      state.red.penalties = 0;
+      state.blue.penalties = 0;
+      state.red.penaltiesAwardedThisEnd = 0;
+      state.blue.penaltiesAwardedThisEnd = 0;
+      state.red.penaltiesScoredThisEnd = 0;
+      state.blue.penaltiesScoredThisEnd = 0;
+      state.firstPenaltySide = null;
+      state.endStarted = true;
+      toggleModal("tie-modal", false);
+      updateDisplay();
+    }
+
+    function nextTieBreakCount(currentCount) {
+      const count = Number(currentCount);
+      return Number.isInteger(count) && count >= 0 ? count + 1 : 1;
+    }
+
+    function confirmEndMatch() {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return alert("暖身期間尚未進入正式比賽。");
+      if (confirm("確定結束比賽並檢視上傳結果？送出前仍可返回修改。")) {
+        endMatch();
+      }
+    }
+
+    function endMatch() {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return alert("暖身期間尚未進入正式比賽。");
+      if (!state.tieBreak.active) {
+        if (!guardCurrentRegularEndScore()) return;
+        if (!hasRecordedCurrentEnd()) {
+          recordEnd();
+          upsertEndReport(state.currentEnd);
+        }
+        const incompleteEnds = window.NationalFormalMsbConfig.incompleteRegularEndNumbers(state.endReports, state.totalEnds);
+        if (!hasCompletedRegularEnds() || incompleteEnds.length) {
+          return alert(incompleteEnds.length
+            ? regularEndScoreGuardMessage(incompleteEnds, true)
+            : `本場正規賽共 ${state.totalEnds} 局，請完成全部局數後再完賽。`);
+        }
+      }
+      pauseTimer();
+      if (state.tieBreak.active && !state.tieBreak.winner) {
+        if (state.tieBreak.score.red === state.tieBreak.score.blue) {
+          alert("Tie-break 仍為平手，請繼續下一個 TB。");
+          return;
+        }
+        state.tieBreak.winner = state.tieBreak.score.red > state.tieBreak.score.blue ? "red" : "blue";
+        upsertEndReport(currentEndKey());
+      }
+      if (!state.tieBreak.active && state.red.score === state.blue.score && !state.tieBreak.winner) {
+        state.tieBreak.required = true;
+        toggleModal("tie-modal", true);
+        return;
+      }
+      const totals = regularScoreTotals();
+      document.getElementById("result-red-score").textContent = totals.red;
+      document.getElementById("result-blue-score").textContent = totals.blue;
+      const redWins = totals.red > totals.blue || state.tieBreak.winner === "red";
+      const winningTeam = teamForSide(redWins ? "red" : "blue");
+      document.getElementById("result-winner-text").textContent = `${winningTeam.displayName || winningTeam.name || "勝方"} 勝`;
+      renderResultSummary();
+      renderReport("match-report-content");
+      syncApprovalInputs();
+      document.getElementById("upload-btn").textContent = isPublicScoreboardMode() ? "儲存本機報表" : "Report Result / 上傳結果";
+      document.getElementById("upload-status").textContent = "";
+      toggleModal("result-modal", true);
+    }
+
+    function renderResultSummary() {
+      const box = document.getElementById("result-ends");
+      box.textContent = "";
+      const totals = regularScoreTotals();
+      document.getElementById("result-red-score").textContent = totals.red;
+      document.getElementById("result-blue-score").textContent = totals.blue;
+      const redWins = totals.red > totals.blue || state.tieBreak.winner === "red";
+      const winningTeam = teamForSide(redWins ? "red" : "blue");
+      document.getElementById("result-winner-text").textContent = `${winningTeam.displayName || winningTeam.name || "勝方"} 勝`;
+      const regular = createSafeTextElement("div", `正規總分：紅 ${totals.red} : 藍 ${totals.blue}`, "font-bold mb-1");
+      box.appendChild(regular);
+      if (state.tieBreak.winner) {
+        const tb = createSafeTextElement("div", `TB ${state.tieBreak.count}：紅 ${state.tieBreak.score.red} : 藍 ${state.tieBreak.score.blue}`, "font-bold text-amber-200 mb-1");
+        const winner = createSafeTextElement("div", `TB 勝方：${state.tieBreak.winner === "red" ? "紅方" : "藍方"}`, "text-amber-200 mb-2");
+        box.appendChild(tb);
+        box.appendChild(winner);
+      }
+      state.endHistory.forEach(item => {
+        if (item.type === "tieBreak") {
+          box.appendChild(createSafeTextElement("div", `TB：${item.winner === "red" ? "紅方" : "藍方"} 勝`));
+        } else {
+          box.appendChild(createSafeTextElement("div", `第 ${item.end} 局：紅 ${item.redScore} / 藍 ${item.blueScore}，發球 ${item.jackOwner === "red" ? "紅" : "藍"}`));
+        }
+      });
+    }
+
+    function correctionScoreValue(value) {
+      const score = Number(value);
+      return Number.isFinite(score) ? Math.max(0, Math.floor(score)) : 0;
+    }
+
+    function correctionReportForEnd(endNumber) {
+      return state.endReports.find(report => report
+        && report.type === "end"
+        && Number(report.end) === Number(endNumber)) || null;
+    }
+
+    function correctionHistoryForEnd(endNumber) {
+      return state.endHistory.find(item => item
+        && item.type === "end"
+        && Number(item.end) === Number(endNumber)) || null;
+    }
+
+    function correctionScoresFromReport(report) {
+      const config = window.NationalFormalMsbConfig;
+      return {
+        red: correctionScoreValue(config.readEndScore(report, "red")),
+        blue: correctionScoreValue(config.readEndScore(report, "blue"))
+      };
+    }
+
+    function correctionScoresForEnd(endNumber) {
+      const report = correctionReportForEnd(endNumber);
+      if (report) return correctionScoresFromReport(report);
+      if (!state.tieBreak.active && Number(state.currentEnd) === Number(endNumber)) {
+        return currentRegularEndScores();
+      }
+      return null;
+    }
+
+    function isCompletedAndReportedMatch(match = currentMatch) {
+      return Boolean(match
+        && match.status === "completed"
+        && match.resultStatus === "reported");
+    }
+
+    function isScoreCorrectionLocked() {
+      return Boolean(state.reportSubmitted || isCompletedAndReportedMatch());
+    }
+
+    function denyLockedScoreCorrection() {
+      if (!isScoreCorrectionLocked()) return false;
+      alert("報告已送出或賽事已完成，裁判不可再修正比分。");
+      return true;
+    }
+
+    function correctionHistoryTotalBefore(endNumber) {
+      return state.endHistory
+        .filter(item => item && item.type === "end" && Number(item.end) < Number(endNumber))
+        .reduce((totals, item) => {
+          totals.red += correctionScoreValue(item.redScore);
+          totals.blue += correctionScoreValue(item.blueScore);
+          return totals;
+        }, { red: 0, blue: 0 });
+    }
+
+    function correctionReportTotals() {
+      return state.endReports
+        .filter(report => report && report.type === "end")
+        .reduce((totals, report) => {
+          const scores = correctionScoresFromReport(report);
+          totals.red += scores.red;
+          totals.blue += scores.blue;
+          return totals;
+        }, { red: 0, blue: 0 });
+    }
+
+    function rebuildRegularEndHistoryTotals() {
+      const totals = { red: 0, blue: 0 };
+      state.endHistory
+        .filter(item => item && item.type === "end")
+        .slice()
+        .sort((left, right) => Number(left.end) - Number(right.end))
+        .forEach(item => {
+          item.redScore = correctionScoreValue(item.redScore);
+          item.blueScore = correctionScoreValue(item.blueScore);
+          totals.red += item.redScore;
+          totals.blue += item.blueScore;
+          item.redTotal = totals.red;
+          item.blueTotal = totals.blue;
+        });
+    }
+
+    function syncScoreStateAfterCorrection(currentLiveScores) {
+      rebuildRegularEndHistoryTotals();
+      const currentEndNumber = Number(state.currentEnd);
+      if (!state.tieBreak.active
+        && Number.isInteger(currentEndNumber)
+        && currentEndNumber >= 1
+        && currentEndNumber <= state.totalEnds) {
+        const previous = correctionHistoryTotalBefore(currentEndNumber);
+        const currentHistory = correctionHistoryForEnd(currentEndNumber);
+        const current = currentHistory
+          ? { red: correctionScoreValue(currentHistory.redScore), blue: correctionScoreValue(currentHistory.blueScore) }
+          : currentLiveScores;
+        state.endStartScores = { red: previous.red, blue: previous.blue };
+        state.red.score = previous.red + current.red;
+        state.blue.score = previous.blue + current.blue;
+        return;
+      }
+      const totals = correctionReportTotals();
+      state.red.score = totals.red;
+      state.blue.score = totals.blue;
+    }
+
+    function syncCompletedRegularStateAfterCorrection(totals) {
+      const previous = correctionHistoryTotalBefore(state.totalEnds);
+      state.currentEnd = state.totalEnds;
+      state.endStartScores = { red: previous.red, blue: previous.blue };
+      state.red.score = totals.red;
+      state.blue.score = totals.blue;
+      state.endStarted = true;
+    }
+
+    function clearTieBreakForRegularCorrection() {
+      state.endReports = state.endReports.filter(report => report && report.type !== "tieBreak");
+      state.endHistory = state.endHistory.filter(item => item && item.type !== "tieBreak");
+      state.tieBreak = { required: false, active: false, starter: null, winner: null, count: 0, score: { red: 0, blue: 0 } };
+    }
+
+    function renderScoreCorrectionForm() {
+      const select = document.getElementById("score-correction-end");
+      const controls = document.getElementById("score-correction-controls");
+      const applyButton = document.getElementById("apply-score-correction-btn");
+      if (!select || !controls || !applyButton) return;
+      const selected = Number(select.value) || 1;
+      const availableEnds = Array.from({ length: state.totalEnds }, (_, index) => index + 1)
+        .filter(endNumber => correctionScoresForEnd(endNumber));
+      select.innerHTML = Array.from({ length: state.totalEnds }, (_, index) => {
+        const endNumber = index + 1;
+        const available = availableEnds.includes(endNumber);
+        return `<option value="${endNumber}"${available ? "" : " disabled"}>第 ${endNumber} 局${available ? "" : "（尚未進入）"}</option>`;
+      }).join("");
+      const endNumber = availableEnds.includes(selected) ? selected : availableEnds[0];
+      if (!endNumber) {
+        select.value = "1";
+        controls.innerHTML = '<p class="rounded-xl border border-slate-700 bg-slate-950 p-4 text-sm text-slate-400">目前沒有可修正的局數。</p>';
+        applyButton.disabled = true;
+        return;
+      }
+      select.value = String(endNumber);
+      const scores = correctionScoresForEnd(endNumber);
+      controls.innerHTML = `
+        <div class="rounded-xl border border-slate-700 bg-slate-950 p-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-red-950/50 px-4 py-3">
+              <span class="font-black text-red-200">Red</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="adjustCorrectionScore('red', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-red-200 font-black">-</button>
+                <input id="score-correction-red" type="number" min="0" step="1" value="${scores.red}" class="w-16 rounded-lg bg-slate-900 p-2 text-center text-xl font-black text-red-200">
+                <button type="button" onclick="adjustCorrectionScore('red', 1)" class="touch-btn w-10 bg-red-900/60 rounded-lg text-red-100 font-black">+</button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-3 rounded-xl bg-sky-950/50 px-4 py-3">
+              <span class="font-black text-sky-200">Blue</span>
+              <div class="flex items-center gap-2">
+                <button type="button" onclick="adjustCorrectionScore('blue', -1)" class="touch-btn w-10 bg-slate-800 rounded-lg text-sky-200 font-black">-</button>
+                <input id="score-correction-blue" type="number" min="0" step="1" value="${scores.blue}" class="w-16 rounded-lg bg-slate-900 p-2 text-center text-xl font-black text-sky-200">
+                <button type="button" onclick="adjustCorrectionScore('blue', 1)" class="touch-btn w-10 bg-sky-900/60 rounded-lg text-sky-100 font-black">+</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      applyButton.disabled = isScoreCorrectionLocked();
+    }
+
+    function openScoreCorrectionModal() {
+      if (!currentMatch) return alert("請先選擇賽事。");
+      if (state.isWarmUp) return alert("暖身期間尚未進入正規局。");
+      if (denyLockedScoreCorrection()) return;
+      const select = document.getElementById("score-correction-end");
+      if (!select) return;
+      select.innerHTML = Array.from({ length: state.totalEnds }, (_, index) => `<option value="${index + 1}">第 ${index + 1} 局</option>`).join("");
+      renderScoreCorrectionForm();
+      toggleModal("score-correction-modal", true);
+    }
+
+    function adjustCorrectionScore(side, delta) {
+      const input = document.getElementById(`score-correction-${side}`);
+      if (!input) return;
+      input.value = String(Math.max(0, correctionScoreValue(input.value) + delta));
+    }
+
+    function applyScoreCorrection() {
+      if (denyLockedScoreCorrection()) return false;
+      const select = document.getElementById("score-correction-end");
+      const status = document.getElementById("score-correction-status");
+      const endNumber = Number(select && select.value);
+      const sourceScores = correctionScoresForEnd(endNumber);
+      if (!Number.isInteger(endNumber) || endNumber < 1 || endNumber > state.totalEnds || !sourceScores) {
+        if (status) status.textContent = `第 ${endNumber || "指定"} 局目前不可修正。`;
+        return false;
+      }
+      const redInput = document.getElementById("score-correction-red");
+      const blueInput = document.getElementById("score-correction-blue");
+      const scores = {
+        red: correctionScoreValue(redInput && redInput.value),
+        blue: correctionScoreValue(blueInput && blueInput.value)
+      };
+      const currentLiveScores = currentRegularEndScores();
+      const report = correctionReportForEnd(endNumber);
+      if (report) {
+        report.red = { ...(report.red || {}), endScore: scores.red };
+        report.blue = { ...(report.blue || {}), endScore: scores.blue };
+        const history = correctionHistoryForEnd(endNumber);
+        if (history) {
+          history.redScore = scores.red;
+          history.blueScore = scores.blue;
+        }
+        syncScoreStateAfterCorrection(currentLiveScores);
+      } else {
+        state.red.score = (Number(state.endStartScores.red) || 0) + scores.red;
+        state.blue.score = (Number(state.endStartScores.blue) || 0) + scores.blue;
+        state.endStarted = scores.red > 0 || scores.blue > 0;
+      }
+
+      let tieBreakAction = "none";
+      const regularComplete = window.NationalFormalMsbConfig.hasCompleteRegularEndReports(state.endReports, state.totalEnds);
+      if (regularComplete) {
+        const totals = correctionReportTotals();
+        const hadTieBreak = state.tieBreak.active
+          || state.tieBreak.required
+          || !!state.tieBreak.winner
+          || state.endReports.some(item => item && item.type === "tieBreak");
+        if (totals.red === totals.blue || hadTieBreak) {
+          clearTieBreakForRegularCorrection();
+          syncCompletedRegularStateAfterCorrection(totals);
+          if (totals.red === totals.blue) {
+            state.tieBreak.required = true;
+            tieBreakAction = "required";
+          } else {
+            tieBreakAction = "cleared";
+          }
+        }
+      }
+
+      const resultModalVisible = !document.getElementById("result-modal").classList.contains("hidden");
+      toggleModal("score-correction-modal", false);
+      updateDisplay();
+      if (resultModalVisible) {
+        renderResultSummary();
+        renderReport("match-report-content");
+      }
+      if (tieBreakAction === "required") {
+        toggleModal("result-modal", false);
+        toggleModal("tie-modal", true);
+        alert("比分已修正，請重新核對比賽結果；正規總分平手，請重新進行 Tie-break。");
+      } else if (resultModalVisible) {
+        document.getElementById("upload-status").textContent = "比分已修正，請重新核對比賽結果。";
+      } else {
+        alert("比分已修正，請重新核對比賽結果。");
+      }
+      return true;
+    }
+
+    function updateMatchApproval(key, checked) {
+      if (!Object.prototype.hasOwnProperty.call(state.matchApproval, key)) return;
+      state.matchApproval[key] = !!checked;
+    }
+
+    function syncApprovalInputs() {
+      const map = {
+        redPlayer: "approval-red-player",
+        bluePlayer: "approval-blue-player",
+        referee: "approval-referee"
+      };
+      Object.keys(map).forEach(key => {
+        const input = document.getElementById(map[key]);
+        if (input) input.checked = !!state.matchApproval[key];
+      });
+    }
+
+    function hasMatchApproval() {
+      return !!(state.matchApproval.redPlayer && state.matchApproval.bluePlayer && state.matchApproval.referee);
+    }
+
+    function returnToMatchList() {
+      if (isPublicScoreboardMode()) {
+        toggleModal("result-modal", false);
+        showMatchPicker();
+        return;
+      }
+      if (isTrainingMode()) {
+        const params = new URLSearchParams();
+        if (new URLSearchParams(window.location.search).get("localAcceptance") === "1") {
+          params.set("localAcceptance", "1");
+        }
+        window.location.href = `msb_training.html${params.toString() ? `?${params.toString()}` : ""}`;
+        return;
+      }
+      window.location.href = "msb_ios.html";
+    }
+
+    function showReturnToMatchListButton() {
+      let button = document.getElementById("return-list-btn");
+      if (!button) {
+        button = document.createElement("button");
+        button.id = "return-list-btn";
+        button.type = "button";
+        button.className = "w-full bg-sky-600 rounded-xl py-4 font-black mb-2";
+        button.textContent = isTrainingMode() ? "返回訓練入口" : "返回賽事列表";
+        button.addEventListener("click", returnToMatchList);
+        const uploadBtn = document.getElementById("upload-btn");
+        if (uploadBtn && uploadBtn.parentNode) {
+          uploadBtn.parentNode.insertBefore(button, uploadBtn.nextSibling);
+        }
+      }
+      button.classList.remove("hidden");
+      const resultButtons = Array.from(document.querySelectorAll("#result-modal button"));
+      resultButtons
+        .filter(item => item.id !== "upload-btn" && item.id !== "return-list-btn")
+        .forEach(item => item.classList.add("hidden"));
+    }
+
+    function winnerSide() {
+      const winner = window.NationalFormalMsbConfig.winnerForRegularScores(regularScoreTotals());
+      return state.tieBreak.winner || winner || "blue";
+    }
+
+    function regularScoreTotals() {
+      return window.NationalFormalMsbConfig.sumRegularScores(state.endReports, state.totalEnds);
+    }
+
+    function teamForSide(side) {
+      const teamId = canonicalTeamIdForSide(side);
+      const isTeamA = teamId && teamId === String(currentMatch?.teamA_id || "");
+      return {
+        teamId: teamId || null,
+        name: isTeamA ? currentMatch?.teamA_name : currentMatch?.teamB_name,
+        displayName: state[side]?.name || ""
+      };
+    }
+
+    function canonicalTeamNameForId(teamId) {
+      const id = String(teamId || "");
+      if (id && id === String(currentMatch?.teamA_id || "")) return String(currentMatch?.teamA_name || "");
+      if (id && id === String(currentMatch?.teamB_id || "")) return String(currentMatch?.teamB_name || "");
+      return "";
+    }
+
+    function activeMatchId() {
+      return state.matchId || currentMatch?.id || matchIdFromUrl || "";
+    }
+
+    const LOCAL_PROGRESS_VERSION = "msb-backup-progress-v1";
+
+    function localProgressKey(matchId) {
+      if (!matchId) return "";
+      return `${LOCAL_PROGRESS_VERSION}:${SCOREBOARD_ROUTE_MODE}:${matchId}`;
+    }
+
+    function readLocalProgress(matchId) {
+      const key = localProgressKey(matchId);
+      if (!key || !window.localStorage) return null;
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) return null;
+        const progress = JSON.parse(raw);
+        return progress && progress.version === LOCAL_PROGRESS_VERSION && progress.matchId === matchId
+          ? progress
+          : null;
+      } catch (error) {
+        console.warn("unable to read local scoreboard progress", error);
+        return null;
+      }
+    }
+
+    function saveLocalProgress() {
+      if (isRestoringLocalProgress) return true;
+      const key = localProgressKey(activeMatchId());
+
+      if (!key || !currentMatch) return false;
+      try {
+        if (!window.localStorage) return false;
+        window.localStorage.setItem(key, JSON.stringify({
+          version: LOCAL_PROGRESS_VERSION,
+          matchId: activeMatchId(),
+          mode: state.mode,
+          currentEnd: state.currentEnd,
+          endSeconds: state.endSeconds,
+          selectedEndMinutes: selectedEndMinutes,
+          totalEnds: state.totalEnds,
+          currentMatch: currentMatch ? {
+            id: currentMatch.id,
+            teamA_id: currentMatch.teamA_id,
+            teamB_id: currentMatch.teamB_id,
+            teamA_name: currentMatch.teamA_name,
+            teamB_name: currentMatch.teamB_name
+          } : null,
+          red: state.red,
+          blue: state.blue,
+          endHistory: state.endHistory,
+          endReports: state.endReports,
+          timeoutHistory: state.timeoutHistory,
+          penaltyHistory: state.penaltyHistory,
+          violations: state.violations,
+          tieBreak: state.tieBreak,
+          matchApproval: state.matchApproval,
+          jackOwnerOverride: state.jackOwnerOverride,
+          firstPenaltySide: state.firstPenaltySide,
+          endStartScores: state.endStartScores,
+          endStarted: state.endStarted,
+          colorLocked: state.colorLocked,
+          timerEverStarted: state.timerEverStarted,
+          warmUpEverStarted: state.warmUpEverStarted,
+          isWarmUp: state.isWarmUp,
+          warmUpType: state.warmUpType,
+          reportSubmitted: state.reportSubmitted,
+          localReport: state.localReport,
+          localResultSummary: state.localResultSummary
+        }));
+        return true;
+      } catch (error) {
+        console.warn("unable to save local scoreboard progress", error);
+        return false;
+      }
+    }
+
+    function clearLocalProgress(matchId = activeMatchId()) {
+      if (isPublicScoreboardMode()) return;
+      const key = localProgressKey(matchId);
+      if (!key || !window.localStorage) return;
+      try {
+        window.localStorage.removeItem(key);
+      } catch (error) {
+        console.warn("unable to clear local scoreboard progress", error);
+      }
+    }
+
+    function applyLocalProgress(progress) {
+      if (!progress || progress.mode !== state.mode || progress.matchId !== activeMatchId()) return false;
+      if (progress.red && typeof progress.red === "object") Object.assign(state.red, progress.red);
+      if (progress.blue && typeof progress.blue === "object") Object.assign(state.blue, progress.blue);
+      ["endHistory", "endReports", "timeoutHistory", "penaltyHistory", "violations"].forEach(key => {
+        if (Array.isArray(progress[key])) state[key] = progress[key];
+      });
+      if (progress.tieBreak && typeof progress.tieBreak === "object") {
+        state.tieBreak = {
+          ...state.tieBreak,
+          ...progress.tieBreak,
+          score: { ...state.tieBreak.score, ...(progress.tieBreak.score || {}) }
+        };
+      }
+      if (progress.matchApproval && typeof progress.matchApproval === "object") {
+        state.matchApproval = { ...state.matchApproval, ...progress.matchApproval };
+      }
+      if (progress.endStartScores && typeof progress.endStartScores === "object") {
+        state.endStartScores = { ...state.endStartScores, ...progress.endStartScores };
+      }
+      if (progress.jackOwnerOverride === "red" || progress.jackOwnerOverride === "blue" || progress.jackOwnerOverride === null) {
+        state.jackOwnerOverride = progress.jackOwnerOverride;
+      }
+      if (progress.firstPenaltySide === "red" || progress.firstPenaltySide === "blue" || progress.firstPenaltySide === null) {
+        state.firstPenaltySide = progress.firstPenaltySide;
+      }
+      state.currentEnd = progress.tieBreak?.active
+        ? String(progress.currentEnd || "TB 1")
+        : Math.min(state.totalEnds, Math.max(1, Number(progress.currentEnd) || 1));
+      if (isPublicScoreboardMode() || (currentMatch && currentMatch.training === true)) {
+        const restoredSeconds = Number(progress.endSeconds);
+        if (Number.isInteger(restoredSeconds) && restoredSeconds >= 60 && restoredSeconds <= 1800) {
+          state.endSeconds = restoredSeconds;
+          selectedEndMinutes = Number.isInteger(Number(progress.selectedEndMinutes))
+            ? Number(progress.selectedEndMinutes)
+            : restoredSeconds / 60;
+        }
+      }
+      state.endStarted = Boolean(progress.endStarted);
+      state.isWarmUp = Boolean(progress.isWarmUp);
+      state.warmUpType = progress.warmUpType || state.warmUpType;
+      state.timerEverStarted = progress.timerEverStarted === true
+        || progress.warmUpEverStarted === true
+        || !state.isWarmUp
+        || Number(state.red.timeLeft) < WARM_UP_SECONDS
+        || Number(state.blue.timeLeft) < WARM_UP_SECONDS
+        || Number(state.red.timerStarts) > 0
+        || Number(state.blue.timerStarts) > 0;
+      state.warmUpEverStarted = progress.warmUpEverStarted === true
+        || (progress.timerEverStarted === true && state.isWarmUp);
+      state.colorLocked = progress.colorLocked === true || hasMatchProgress();
+      state.reportSubmitted = progress.reportSubmitted === true;
+      state.localReport = progress.localReport || null;
+      state.localResultSummary = progress.localResultSummary || null;
+      pausedSide = null;
+      return true;
+    }
+
+    function scoreboardTimestamp() {
+      return isPublicScoreboardMode() ? new Date().toISOString() : firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    function buildResultSummary() {
+      const winner = winnerSide();
+      const totals = regularScoreTotals();
+      const canonicalTotals = canonicalRegularScoreTotals();
+      const loser = winner === "red" ? "blue" : "red";
+      const winnerTeam = teamForSide(winner);
+      const loserTeam = teamForSide(loser);
+      if (isTrainingMode()) {
+        return {
+          scoreA: canonicalTotals.teamA,
+          scoreB: canonicalTotals.teamB,
+          teamAScore: canonicalTotals.teamA,
+          teamBScore: canonicalTotals.teamB,
+          redScore: totals.red,
+          blueScore: totals.blue,
+          ends: state.endReports,
+          winner,
+          winnerId: winnerTeam.teamId || null,
+          status: "completed",
+          resultStatus: "reported",
+          submittedBy: currentUser ? currentUser.uid : null,
+          refereeUid: currentUser ? currentUser.uid : null,
+          completedAt: scoreboardTimestamp(),
+          updatedAt: scoreboardTimestamp()
+        };
+      }
+      return {
+        scoreA: [canonicalTotals.teamA],
+        scoreB: [canonicalTotals.teamB],
+        status: "completed",
+        winnerId: winnerTeam.teamId || null,
+        winnerName: winnerTeam.name || "",
+        loserId: loserTeam.teamId || null,
+        loserName: loserTeam.name || "",
+        redScore: totals.red,
+        blueScore: totals.blue,
+        winner,
+        winnerTeamId: winnerTeam.teamId || null,
+        teamAScore: canonicalTotals.teamA,
+        teamBScore: canonicalTotals.teamB,
+        resultStatus: "reported",
+        reportedAt: scoreboardTimestamp(),
+        reportedBy: currentUser ? currentUser.uid : null,
+        tieBreakUsed: !!state.tieBreak.winner,
+        tieBreakWinner: state.tieBreak.winner || null,
+        completedAt: scoreboardTimestamp(),
+        updatedAt: scoreboardTimestamp()
+      };
+    }
+
+    function buildTieBreakArchive() {
+      const reports = state.endReports
+        .filter(report => report.type === "tieBreak")
+        .map(report => ({
+          label: String(report.end),
+          redScore: Number(report.red?.endScore || 0),
+          blueScore: Number(report.blue?.endScore || 0),
+          winner: report.winner || null,
+          winnerId: report.winner ? canonicalTeamIdForSideAtSnapshot(report, report.winner) : null
+        }));
+      const finalReport = state.endReports.find(report => report.type === "tieBreak"
+        && String(report.end) === `TB ${state.tieBreak.count}`);
+      return {
+        used: reports.length > 0 || !!state.tieBreak.winner,
+        reports,
+        winner: state.tieBreak.winner || null,
+        winnerId: state.tieBreak.winner
+          ? canonicalTeamIdForSideAtSnapshot(finalReport, state.tieBreak.winner)
+          : null
+      };
+    }
+
+    function buildMatchReportData() {
+      const winner = winnerSide();
+      const totals = regularScoreTotals();
+      if (isTrainingMode()) {
+        return {
+          training: true,
+          matchId: activeMatchId() || null,
+          eventYear: APP.eventYear || null,
+          eventName: APP.eventName || "",
+          region: currentMatch?.region || "",
+          stage: currentMatch?.stage || "",
+          venue: currentMatch?.venue || "",
+          redTeam: { ...teamForSide("red"), score: totals.red },
+          blueTeam: { ...teamForSide("blue"), score: totals.blue },
+          canonicalScore: canonicalRegularScoreTotals(),
+          regularScore: { red: totals.red, blue: totals.blue },
+          endReports: state.endReports,
+          violations: state.violations,
+          approval: {
+            redPlayer: !!state.matchApproval.redPlayer,
+            bluePlayer: !!state.matchApproval.bluePlayer,
+            referee: !!state.matchApproval.referee,
+            approvedAt: scoreboardTimestamp()
+          },
+          winner,
+          status: "submitted",
+          submittedAt: scoreboardTimestamp(),
+          submittedBy: currentUser ? currentUser.uid : null,
+          updatedAt: scoreboardTimestamp(),
+          version: "national_training_match_report_v1"
+        };
+      }
+      return {
+        purpose: "archive_only",
+        matchId: activeMatchId() || null,
+        eventYear: APP.eventYear || null,
+        eventName: APP.eventName || "",
+        region: currentMatch?.region || APP.defaultRegion || "",
+        stage: currentMatch?.stage || "",
+        category: currentMatch?.category || "",
+        court: currentMatch?.venue || "",
+        round: currentMatch?.roundName || currentMatch?.groupId || "",
+        redTeam: { ...teamForSide("red"), score: totals.red },
+        blueTeam: { ...teamForSide("blue"), score: totals.blue },
+        regularScore: {
+          red: totals.red,
+          blue: totals.blue
+        },
+        tieBreak: buildTieBreakArchive(),
+        canonicalScore: canonicalRegularScoreTotals(),
+        winner,
+        endReports: state.endReports,
+        violations: state.violations,
+        approval: {
+          redPlayer: !!state.matchApproval.redPlayer,
+          bluePlayer: !!state.matchApproval.bluePlayer,
+          referee: !!state.matchApproval.referee,
+          approvedAt: scoreboardTimestamp()
+        },
+        status: "submitted",
+        submittedAt: scoreboardTimestamp(),
+        submittedBy: currentUser ? currentUser.uid : null,
+        updatedAt: scoreboardTimestamp(),
+        version: "msb_ios_match_report_v1"
+      };
+    }
+
+    function validateCanonicalResultConsistency(result) {
+      const fail = reason => ({ valid: false, reason });
+      if (!currentMatch || !result || !result.summary || !result.report) return fail("missing-result-context");
+      if (state.colorMappingInvalid || !isCanonicalSideAssignmentValid()) return fail("invalid-side-assignment");
+      if (!state.colorLocked) return fail("colors-not-confirmed");
+
+      const teamAId = String(currentMatch.teamA_id || "");
+      const teamBId = String(currentMatch.teamB_id || "");
+      const redId = String(state.red.teamId || "");
+      const blueId = String(state.blue.teamId || "");
+      const summary = result.summary;
+      const report = result.report;
+      const colorTotals = regularScoreTotals();
+      const canonicalTotals = canonicalRegularScoreTotals();
+      const finiteNonNegative = value => Number.isFinite(Number(value)) && Number(value) >= 0;
+      const sameScore = (left, right) => Number.isFinite(Number(left)) && Number(left) === Number(right);
+      const sameOptionalScore = (left, right) => left == null && right == null || sameScore(left, right);
+      const payloadScore = value => {
+        if (Array.isArray(value)) return value.length === 1 ? Number(value[0]) : NaN;
+        return Number(value);
+      };
+      if (![colorTotals.red, colorTotals.blue, canonicalTotals.teamA, canonicalTotals.teamB].every(finiteNonNegative)) {
+        return fail("invalid-score-values");
+      }
+
+      const expectedTeamAFromCurrentSides = redId === teamAId ? Number(colorTotals.red) : Number(colorTotals.blue);
+      const expectedTeamBFromCurrentSides = redId === teamBId ? Number(colorTotals.red) : Number(colorTotals.blue);
+      if (!sameScore(expectedTeamAFromCurrentSides, canonicalTotals.teamA)
+        || !sameScore(expectedTeamBFromCurrentSides, canonicalTotals.teamB)) return fail("color-to-canonical-score-mismatch");
+
+      const identityRows = [...(state.endHistory || []), ...(state.endReports || [])];
+      for (const row of identityRows) {
+        if (!row) continue;
+        const hasRed = !!row.redTeamId;
+        const hasBlue = !!row.blueTeamId;
+        if (hasRed !== hasBlue) return fail("partial-history-mapping");
+        if (hasRed && hasBlue) {
+          const rowRed = String(row.redTeamId);
+          const rowBlue = String(row.blueTeamId);
+          const legalPair = (rowRed === teamAId && rowBlue === teamBId)
+            || (rowRed === teamBId && rowBlue === teamAId);
+          if (!legalPair || rowRed === rowBlue) return fail("invalid-history-mapping");
+          if (rowRed !== redId || rowBlue !== blueId) return fail("history-mapping-changed-after-progress");
+        } else if (redId !== teamAId || blueId !== teamBId) {
+          return fail("legacy-history-mapping-unknown");
+        }
+      }
+
+      if (!sameScore(summary.teamAScore, canonicalTotals.teamA)
+        || !sameScore(summary.teamBScore, canonicalTotals.teamB)
+        || !sameScore(payloadScore(summary.scoreA), canonicalTotals.teamA)
+        || !sameScore(payloadScore(summary.scoreB), canonicalTotals.teamB)) return fail("canonical-result-score-mismatch");
+      if (!sameScore(summary.redScore, colorTotals.red) || !sameScore(summary.blueScore, colorTotals.blue)) {
+        return fail("color-result-score-mismatch");
+      }
+      if (!report.redTeam || !report.blueTeam
+        || String(report.redTeam.teamId || "") !== redId
+        || String(report.blueTeam.teamId || "") !== blueId
+        || String(report.redTeam.name || "") !== String(teamForSide("red").name || "")
+        || String(report.blueTeam.name || "") !== String(teamForSide("blue").name || "")
+        || !sameScore(report.redTeam.score, colorTotals.red)
+        || !sameScore(report.blueTeam.score, colorTotals.blue)
+        || String(report.redTeam.displayName || "") !== String(state.red.name || "")
+        || String(report.blueTeam.displayName || "") !== String(state.blue.name || "")) return fail("report-side-identity-mismatch");
+      if (!report.regularScore
+        || !sameScore(report.regularScore.red, colorTotals.red)
+        || !sameScore(report.regularScore.blue, colorTotals.blue)
+        || !report.canonicalScore
+        || !sameScore(report.canonicalScore.teamA, canonicalTotals.teamA)
+        || !sameScore(report.canonicalScore.teamB, canonicalTotals.teamB)) return fail("report-score-mismatch");
+      if (!Array.isArray(report.endReports) || report.endReports.length !== state.endReports.length
+        || !Array.isArray(report.violations) || report.violations.length !== state.violations.length) return fail("report-history-mismatch");
+      for (let index = 0; index < state.endReports.length; index += 1) {
+        const actual = report.endReports[index];
+        const source = state.endReports[index];
+        if (!actual || !source || String(actual.end) !== String(source.end)
+          || String(actual.redTeamId || "") !== String(source.redTeamId || "")
+          || String(actual.blueTeamId || "") !== String(source.blueTeamId || "")
+          || !sameScore(actual.red?.endScore, source.red?.endScore)
+          || !sameScore(actual.blue?.endScore, source.blue?.endScore)
+          || !sameOptionalScore(actual.red?.penaltyBallsAwarded, source.red?.penaltyBallsAwarded)
+          || !sameOptionalScore(actual.red?.penaltyBallsScored, source.red?.penaltyBallsScored)
+          || !sameOptionalScore(actual.blue?.penaltyBallsAwarded, source.blue?.penaltyBallsAwarded)
+          || !sameOptionalScore(actual.blue?.penaltyBallsScored, source.blue?.penaltyBallsScored)
+          || JSON.stringify(actual.red?.violations || []) !== JSON.stringify(source.red?.violations || [])
+          || JSON.stringify(actual.blue?.violations || []) !== JSON.stringify(source.blue?.violations || [])) return fail("report-end-history-mismatch");
+      }
+      for (let index = 0; index < state.violations.length; index += 1) {
+        const actual = report.violations[index];
+        const source = state.violations[index];
+        if (!actual || !source || actual.side !== source.side
+          || String(actual.teamId || "") !== String(source.teamId || "")
+          || String(actual.code || "") !== String(source.code || "")
+          || String(actual.end || "") !== String(source.end || "")) return fail("report-violation-identity-mismatch");
+      }
+      if (String(report.winner || "") !== String(summary.winner || "")) return fail("report-winner-side-mismatch");
+
+      const regularWinnerId = canonicalTotals.teamA === canonicalTotals.teamB
+        ? ""
+        : canonicalTotals.teamA > canonicalTotals.teamB ? teamAId : teamBId;
+      if (state.tieBreak.winner && canonicalTotals.teamA !== canonicalTotals.teamB) return fail("unexpected-tie-break-winner");
+      const expectedWinnerId = state.tieBreak.winner
+        ? canonicalTeamIdForSide(state.tieBreak.winner)
+        : regularWinnerId;
+      const expectedWinnerSide = sideForTeamId(expectedWinnerId);
+      const expectedLoserId = expectedWinnerId === teamAId ? teamBId : teamAId;
+      if (!expectedWinnerId || !expectedWinnerSide
+        || summary.winner !== expectedWinnerSide
+        || String(summary.winnerId || "") !== expectedWinnerId) return fail("winner-identity-mismatch");
+      if (!isTrainingMode()) {
+        const expectedWinnerName = expectedWinnerId === teamAId
+          ? String(currentMatch.teamA_name || "") : String(currentMatch.teamB_name || "");
+        const expectedLoserName = expectedLoserId === teamAId
+          ? String(currentMatch.teamA_name || "") : String(currentMatch.teamB_name || "");
+        if (expectedWinnerId === expectedLoserId
+          || String(summary.winnerTeamId || "") !== expectedWinnerId
+          || String(summary.loserId || "") !== expectedLoserId
+          || String(summary.winnerName || "") !== expectedWinnerName
+          || String(summary.loserName || "") !== expectedLoserName) return fail("winner-loser-identity-mismatch");
+        if (!!summary.tieBreakUsed !== !!state.tieBreak.winner
+          || String(summary.tieBreakWinner || "") !== String(state.tieBreak.winner || "")) return fail("result-tie-break-mismatch");
+      }
+      if (summary.winnerId && summary.winnerId === (summary.loserId || "")) return fail("winner-equals-loser");
+      if (report.tieBreak && report.tieBreak.used) {
+        if (String(report.tieBreak.winner || "") !== String(state.tieBreak.winner || "")) return fail("tie-break-report-winner-mismatch");
+        for (const tb of report.tieBreak.reports || []) {
+          if (!tb.winnerId || ![teamAId, teamBId].includes(String(tb.winnerId))) return fail("tie-break-winner-identity-missing");
+          const row = state.endReports.find(item => item && item.type === "tieBreak" && String(item.end) === String(tb.label));
+          if (row && String(tb.winnerId) !== canonicalTeamIdForSideAtSnapshot(row, row.winner)) return fail("tie-break-snapshot-mismatch");
+        }
+        if (state.tieBreak.winner && String(report.tieBreak.winnerId || "") !== expectedWinnerId) {
+          return fail("tie-break-final-winner-mismatch");
+        }
+      }
+      for (const item of state.violations || []) {
+        if (!item || !["red", "blue"].includes(item.side)) return fail("invalid-violation-side");
+        if (item.teamId && String(item.teamId) !== (item.side === "red" ? redId : blueId)) return fail("violation-team-mismatch");
+        if (!item.teamId && (redId !== teamAId || blueId !== teamBId)) return fail("legacy-violation-mapping-unknown");
+      }
+      for (const item of state.penaltyHistory || []) {
+        if (!item || !["red", "blue"].includes(item.side)) return fail("invalid-penalty-side");
+        if (item.teamId && String(item.teamId) !== (item.side === "red" ? redId : blueId)) return fail("penalty-team-mismatch");
+        if (item.againstTeamId && String(item.againstTeamId) !== (item.side === "red" ? blueId : redId)) return fail("penalty-beneficiary-mismatch");
+        if (!item.teamId && (redId !== teamAId || blueId !== teamBId)) return fail("legacy-penalty-mapping-unknown");
+      }
+      return { valid: true, reason: "" };
+    }
+
+    async function confirmAndUpload() {
+      const statusEl = document.getElementById("upload-status");
+      const uploadBtn = document.getElementById("upload-btn");
+      if (state.reportSubmitted) return;
+      const incompleteEnds = window.NationalFormalMsbConfig.incompleteRegularEndNumbers(state.endReports, state.totalEnds);
+      if (!window.NationalFormalMsbConfig.hasCompleteRegularEndReports(state.endReports, state.totalEnds) || incompleteEnds.length) {
+        statusEl.textContent = regularEndScoreGuardMessage(incompleteEnds.length ? incompleteEnds : Array.from({ length: state.totalEnds }, (_, index) => index + 1), true);
+        return;
+      }
+      if (!hasMatchApproval()) {
+        statusEl.textContent = "請完成紅方、藍方與裁判確認後再送出。";
+        return;
+      }
+      const matchId = activeMatchId();
+      if (!currentMatch || !matchId) {
+        statusEl.textContent = "目前未連結比賽資料，已產生本機 Match Report，尚未上傳。";
+        return;
+      }
+      if (isPublicScoreboardMode()) {
+        const result = { summary: buildResultSummary(), report: buildMatchReportData() };
+        const consistency = validateCanonicalResultConsistency(result);
+        if (!consistency.valid) {
+          statusEl.textContent = "本機報表檢核失敗，紅藍方與隊伍對應不一致，請勿結束比賽。";
+          console.error("local match report consistency blocked", consistency.reason);
+          return false;
+        }
+        state.localReport = result.report;
+        state.localResultSummary = result.summary;
+        archiveLocalReport(result);
+        state.reportSubmitted = true;
+        statusEl.textContent = "比賽結果與完整報表已保存於此裝置，沒有上傳或連接正式資料。";
+        document.getElementById("score-correction-settings-btn").disabled = true;
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "已完成（僅本機）";
+        showReturnToMatchListButton();
+        updateDisplay();
+        return;
+      }
+      const result = {
+        summary: buildResultSummary(),
+        report: buildMatchReportData()
+      };
+      const consistency = validateCanonicalResultConsistency(result);
+      if (!consistency.valid) {
+        statusEl.textContent = "比賽結果資料檢核失敗，紅藍方與隊伍資料不一致，請勿送出並聯絡管理員。";
+        console.error("match result consistency blocked", consistency.reason);
+        return false;
+      }
+      statusEl.textContent = "送出中...";
+      uploadBtn.disabled = true;
+      try {
+        const isNationalKnockout = !isTrainingMode()
+          && currentMatch
+          && currentMatch.stage === "final"
+          && currentMatch.isTournament === true
+          && window.NationalFinalLifecycle;
+        if (isNationalKnockout) {
+          await window.NationalFinalLifecycle.saveKnockoutResultAndPropagate(db, matchId, result.summary, result.report);
+        } else {
+          const batch = db.batch();
+          const matchRef = scoreboardMatchRef(matchId);
+          const reportRef = scoreboardReportRef(matchId);
+          batch.update(matchRef, result.summary);
+          batch.set(reportRef, result.report, { merge: true });
+          await batch.commit();
+        }
+         state.reportSubmitted = true;
+         clearLocalProgress(matchId);
+         statusEl.textContent = isTrainingMode()
+          ? "訓練結果與訓練報告已送出；正式賽事資料未被操作。"
+          : "比賽結果與留存紀錄已送出。";
+        document.getElementById("score-correction-settings-btn").disabled = true;
+        uploadBtn.textContent = "已送出";
+        showReturnToMatchListButton();
+      } catch (error) {
+        console.error("submit match report failed", error);
+        statusEl.textContent = error && error.code === "DOWNSTREAM_LOCKED"
+          ? "下一輪賽事已開始或已有比賽結果，無法修改上一輪結果。"
+          : "送出失敗，請確認網路或權限後再試。";
+        uploadBtn.disabled = false;
+      }
+    }
+
+    function updateDisplay() {
+      document.getElementById("red-score").textContent = state.red.score;
+      document.getElementById("blue-score").textContent = state.blue.score;
+      document.getElementById("red-timer-btn").textContent = formatTime(state.red.timeLeft);
+      document.getElementById("blue-timer-btn").textContent = formatTime(state.blue.timeLeft);
+      document.getElementById("center-end-display").textContent = state.isWarmUp ? "暖身" : state.tieBreak.active ? `決勝局 TB ${state.tieBreak.count || ""}`.trim() : `第 ${state.currentEnd} 局`;
+      document.getElementById("center-total-ends").textContent = state.totalEnds;
+      document.querySelectorAll(".formal-end-count").forEach(element => {
+        element.textContent = state.totalEnds;
+      });
+      document.getElementById("center-mode").textContent = state.modeLabel;
+      document.getElementById("center-subtext").textContent = state.isWarmUp
+        ? "Warm Up - 同時暖身"
+        : state.tieBreak.active
+          ? "目前為決勝局，紅藍加減分會記錄於 TB 分數，不列入正規總分。"
+          : `End ${state.currentEnd} / ${state.totalEnds}`;
+      document.getElementById("tb-score-card").classList.toggle("hidden", !state.tieBreak.active);
+      document.getElementById("tb-red-score").textContent = state.tieBreak.score.red;
+      document.getElementById("tb-blue-score").textContent = state.tieBreak.score.blue;
+      document.getElementById("red-tb-hint").classList.toggle("hidden", !state.tieBreak.active);
+      document.getElementById("blue-tb-hint").classList.toggle("hidden", !state.tieBreak.active);
+      document.getElementById("header-mode-text").textContent = state.modeLabel;
+      document.getElementById("red-penalty").textContent = state.red.penalties;
+      document.getElementById("blue-penalty").textContent = state.blue.penalties;
+      document.getElementById("red-bnp").textContent = state.red.bnp;
+      document.getElementById("blue-bnp").textContent = state.blue.bnp;
+      document.getElementById("jack-btn").textContent = state.isWarmUp
+        ? "暖身時間"
+        : `${getJackOwner() === "red" ? "紅方發球" : "藍方發球"} (Jack: ${getJackOwner() === "red" ? "Red" : "Blue"})`;
+      document.getElementById("red-panel").classList.toggle("side-active", activeSide === "red" || activeSide === "both");
+      document.getElementById("blue-panel").classList.toggle("side-active", activeSide === "blue" || activeSide === "both");
+      document.getElementById("next-btn").textContent = state.isWarmUp
+        ? "開始比賽 (Start)"
+        : state.endStarted
+          ? "下一局 (Next End)"
+          : "下一局 (Next End)";
+      const correctionSettingsButton = document.getElementById("score-correction-settings-btn");
+      if (correctionSettingsButton) correctionSettingsButton.disabled = !currentMatch || state.isWarmUp || isScoreCorrectionLocked();
+      renderBalls("red");
+      renderBalls("blue");
+      renderViolationBadges("red");
+      renderViolationBadges("blue");
+      renderColorAssignmentControls();
+      saveLocalProgress();
+    }
+
+    function renderBalls(side) {
+      const box = document.getElementById(`${side}-balls`);
+      box.innerHTML = Array.from({ length: 6 }, (_, index) => `<button onclick="toggleBall('${side}', ${index})" class="ball ${index < state[side].balls ? "used" : ""}" aria-label="${side} ball ${index + 1}"></button>`).join("");
+    }
+
+    function formatTime(value) {
+      const min = Math.floor(value / 60).toString().padStart(2, "0");
+      const sec = (value % 60).toString().padStart(2, "0");
+      return `${min}:${sec}`;
+    }
+
+    function updateCustomEndDuration() {
+      const select = document.getElementById("public-end-duration");
+      const wrap = document.getElementById("custom-end-duration-wrap");
+      if (select && wrap) wrap.classList.toggle("hidden", select.value !== "custom");
+    }
+
+    function setPublicEndDurationControls(minutes) {
+      const select = document.getElementById("public-end-duration");
+      const custom = document.getElementById("public-custom-end-minutes");
+      if (!select || !custom) return;
+      const value = Number(minutes);
+      if ([3, 4, 5].includes(value)) {
+        select.value = String(value);
+      } else {
+        select.value = "custom";
+        custom.value = String(value);
+      }
+      updateCustomEndDuration();
+    }
+
+    function selectedEndDurationSeconds() {
+      const select = document.getElementById("public-end-duration");
+      const custom = document.getElementById("public-custom-end-minutes");
+      const minutes = select && select.value === "custom"
+        ? Number(custom && custom.value)
+        : Number(select && select.value);
+      if (!Number.isInteger(minutes) || minutes < 1 || minutes > 30) {
+        alert("請輸入 1 至 30 分鐘的整數。");
+        if (custom) custom.focus();
+        return null;
+      }
+      selectedEndMinutes = minutes;
+      return minutes * 60;
+    }
+
+    function setPublicSetupLocked(locked) {
+      ["public-red-name", "public-blue-name", "public-end-duration", "public-custom-end-minutes"].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.disabled = !!locked;
+      });
+      const start = document.getElementById("public-start-btn");
+      if (start) {
+        start.disabled = !!locked;
+        start.textContent = locked ? "比賽已開始" : "開始使用";
+      }
+      const status = document.getElementById("public-scoreboard-status");
+      if (status) status.textContent = locked
+        ? "比賽已開始，本場時間與隊伍已鎖定。重整頁面會恢復目前比賽。"
+        : "每局 3 分鐘預設，共 4 局。開始比賽後本場時間會鎖定。";
+    }
+
+    function archiveLocalReport(result) {
+      if (!window.localStorage || !result) return false;
+      const key = "msb-backup-2026:reports:v1";
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(key) || "[]");
+        const reports = Array.isArray(saved) ? saved : [];
+        reports.push({ savedAt: new Date().toISOString(), matchId: activeMatchId(), summary: result.summary, report: result.report });
+        window.localStorage.setItem(key, JSON.stringify(reports.slice(-64)));
+        return true;
+      } catch (error) {
+        console.warn("unable to archive local match report", error);
+        return false;
+      }
+    }
+
+    function startPublicScoreboard(options = {}) {
+      if (!isPublicScoreboardMode()) return false;
+      const resume = options.resume === true;
+      const progress = resume ? options.progress || readLocalProgress(PUBLIC_SCOREBOARD_MATCH_ID) : null;
+      const locked = currentMatch && !state.reportSubmitted
+        && (!state.isWarmUp || state.timerEverStarted || hasMatchProgress());
+      if (!resume && locked) {
+        alert("比賽已開始，不能重設本場或更改每局時間。");
+        return false;
+      }
+      if (progress) {
+        selectedEndMinutes = Number(progress.selectedEndMinutes) || Number(progress.endSeconds) / 60 || 3;
+        if (!Number.isInteger(selectedEndMinutes) || selectedEndMinutes < 1 || selectedEndMinutes > 30) selectedEndMinutes = 3;
+      } else {
+        const selectedSeconds = selectedEndDurationSeconds();
+        if (!selectedSeconds) return false;
+      }
+      const savedMatch = progress && progress.currentMatch ? progress.currentMatch : null;
+      const redName = (progress && progress.red && progress.red.name)
+        || document.getElementById("public-red-name").value.trim() || "紅方";
+      const blueName = (progress && progress.blue && progress.blue.name)
+        || document.getElementById("public-blue-name").value.trim() || "藍方";
+      currentUser = null;
+      currentUserProfile = null;
+      currentUserRole = "";
+      currentMatch = {
+        id: PUBLIC_SCOREBOARD_MATCH_ID,
+        teamA_id: savedMatch && savedMatch.teamA_id || "public-local-team-a",
+        teamB_id: savedMatch && savedMatch.teamB_id || "public-local-team-b",
+        teamA_name: savedMatch && savedMatch.teamA_name || redName,
+        teamB_name: savedMatch && savedMatch.teamB_name || blueName,
+        status: "scheduled",
+        scheduleStatus: "local",
+        publicVisible: false,
+        schemaVersion: "msb_backup_local_v1"
+      };
+      state.matchId = PUBLIC_SCOREBOARD_MATCH_ID;
+      state.red.teamId = currentMatch.teamA_id;
+      state.blue.teamId = currentMatch.teamB_id;
+      state.red.name = currentMatch.teamA_name;
+      state.blue.name = currentMatch.teamB_name;
+      document.getElementById("red-name").value = redName;
+      document.getElementById("blue-name").value = blueName;
+      setPublicEndDurationControls(selectedEndMinutes);
+      isRestoringLocalProgress = true;
+      try {
+        resetMatchForMode(gameConfig(), { newMatch: !progress });
+        if (progress) {
+          applyLocalProgress(progress);
+        } else {
+          state.reportSubmitted = false;
+          state.localReport = null;
+          state.localResultSummary = null;
+        }
+      } finally {
+        isRestoringLocalProgress = false;
+      }
+      document.getElementById("public-red-name").value = redName;
+      document.getElementById("public-blue-name").value = blueName;
+      document.getElementById("login-view").classList.add("hidden");
+      document.getElementById("app-view").classList.remove("hidden");
+      applyScoreboardRouteUi();
+      hideMatchPicker();
+      if (state.reportSubmitted) showReturnToMatchListButton();
+      updateDisplay();
+      return true;
+    }
+
+    function showMatchPicker() {
+      if (isPublicScoreboardMode()) {
+        const setup = document.getElementById("public-scoreboard-setup");
+        const authenticatedPicker = document.getElementById("authenticated-match-picker");
+        const pickerTitle = document.getElementById("picker-title");
+        const redInput = document.getElementById("public-red-name");
+        const blueInput = document.getElementById("public-blue-name");
+        const locked = !!(currentMatch && !state.reportSubmitted
+          && (!state.isWarmUp || state.timerEverStarted || hasMatchProgress()));
+        if (setup) setup.classList.remove("hidden");
+        if (authenticatedPicker) authenticatedPicker.classList.add("hidden");
+        if (pickerTitle) pickerTitle.textContent = "本機記分板設定";
+        if (redInput) redInput.value = state.red.name || "紅方";
+        if (blueInput) blueInput.value = state.blue.name || "藍方";
+        setPublicEndDurationControls(selectedEndMinutes);
+        setPublicSetupLocked(locked);
+        document.getElementById("picker-modal").classList.remove("hidden");
+        return;
+      }
+      if (isTrainingMode()) {
+        failClosedScoreboardRoute("訓練模式只能從裁判訓練入口指定 training matchId。");
+        return;
+      }
+      document.getElementById("picker-modal").classList.remove("hidden");
+      if (currentUser) loadMatches();
+    }
+    function hideMatchPicker() {
+      document.getElementById("picker-modal").classList.add("hidden");
+      if (isPublicScoreboardMode()) {
+        document.getElementById("public-scoreboard-setup").classList.add("hidden");
+        document.getElementById("authenticated-match-picker").classList.remove("hidden");
+        document.getElementById("picker-title").textContent = "選擇賽事";
+      }
+    }
+    function toggleModal(id, show) { document.getElementById(id).classList.toggle("hidden", !show); }
+
+    function startScoreboardRuntime() {
+      applyScoreboardRouteUi();
+      if (isPublicScoreboardMode()) {
+        const login = document.getElementById("login-view");
+        const app = document.getElementById("app-view");
+        if (login) login.classList.add("hidden");
+        if (app) app.classList.remove("hidden");
+        const saved = readLocalProgress(PUBLIC_SCOREBOARD_MATCH_ID);
+        if (saved && saved.currentMatch) {
+          startPublicScoreboard({ resume: true, progress: saved });
+        } else {
+          showMatchPicker();
+        }
+        return;
+      }
+      if (SCOREBOARD_ROUTE_MODE_IS_INVALID || !SCOREBOARD_ADAPTER) {
+        failClosedScoreboardRoute("無效的 scoreboard mode；系統已停止且未讀取任何賽事資料。");
+        return;
+      }
+      const runtimeReady = window.FIREBASE_RUNTIME_READY;
+      if (!runtimeReady || typeof runtimeReady.then !== "function") {
+        failClosedScoreboardRoute("Firebase runtime 未完成初始化；系統已停止。");
+        return;
+      }
+      runtimeReady.then(runtime => {
+        const localHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+        if (!runtime || runtime.projectId !== "boccia-national-2026"
+          || (localHost && (runtime.mode !== "local-emulator" || runtime.acceptanceMode !== true || runtime.emulatorWired !== true))) {
+          throw new Error("SCOREBOARD_RUNTIME_BOUNDARY_FAILED");
+        }
+        auth.onAuthStateChanged(handleScoreboardAuthState);
+      }).catch(error => {
+        console.error("scoreboard runtime failed", error);
+        failClosedScoreboardRoute("記分板 runtime 驗證失敗；系統已停止。 ");
+      });
+    }
+
+    startScoreboardRuntime();
+    window.addEventListener("load", () => {
+      renderBalls("red");
+      renderBalls("blue");
+      updateDisplay();
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

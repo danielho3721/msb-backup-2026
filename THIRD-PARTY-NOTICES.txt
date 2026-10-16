@@ -1,0 +1,6 @@
+Third-party assets bundled for offline use:
+
+- Tailwind Play CDN compiler 3.4.17, downloaded from https://cdn.tailwindcss.com/3.4.17. Tailwind CSS is distributed under the MIT License.
+- Lucide 1.14.0, copied with its original license header from the local source asset. Lucide is distributed under the ISC License.
+
+The licenses and copyright notices are retained in the corresponding JavaScript assets.
