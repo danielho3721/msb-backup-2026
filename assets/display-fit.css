@@ -1,0 +1,56 @@
+/* Presentation only: keep the existing 4:2:4 columns and every control in place. */
+@media (orientation: landscape), (min-width: 900px) {
+  main.scoreboard-main { overflow: visible; }
+  .scoreboard-main .team-panel {
+    container-type: inline-size;
+    overflow: visible;
+  }
+  .team-panel > div:first-child { flex: 0 0 auto; min-width: 0; }
+  .team-panel .team-name {
+    box-sizing: border-box;
+    min-width: 0;
+    height: 4.75rem;
+    padding: 0 2px;
+    font-size: min(var(--msb-name-fit, 3.5rem), 3.5rem);
+    line-height: 1.3;
+  }
+  .team-panel .score-row {
+    flex: 1 1 0;
+    min-height: 64px;
+    column-gap: clamp(8px, 3.5cqw, 24px);
+  }
+  .team-panel .score-button { flex: 0 0 56px; }
+  .team-panel .score-number {
+    display: flex;
+    flex: 1 1 0;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: auto;
+    white-space: nowrap;
+    font-size: min(var(--msb-score-fit, clamp(2rem, 22cqw, 16rem)), 16rem);
+    line-height: 1.3;
+  }
+  .team-panel .timer-grid { max-width: none; }
+  .team-panel .timer-display {
+    box-sizing: border-box;
+    min-width: 0;
+    height: clamp(112px, 30cqw, 176px);
+    padding: 12px 2px;
+    white-space: nowrap;
+    font-size: min(var(--msb-timer-fit, clamp(2rem, 15cqw, 8rem)), 8rem);
+    line-height: 1.1;
+  }
+  .team-panel .panel-bottom { gap: clamp(6px, 1.8cqw, 12px); }
+  .team-panel .balls-row {
+    flex: 0 0 auto;
+    gap: clamp(2px, .9cqw, 8.8px);
+    padding: clamp(4px, 1.2cqw, 8px);
+  }
+  .team-panel .ball {
+    flex: 0 0 auto;
+    width: clamp(16px, 4.3cqw, 28px);
+    height: clamp(16px, 4.3cqw, 28px);
+  }
+}
