@@ -259,8 +259,14 @@
         <label class="mt-3 block text-sm font-bold text-sky-200">藍方名稱
           <input id="public-blue-name" type="text" maxlength="80" value="藍方" class="mt-1 w-full rounded-xl border border-sky-900/70 bg-slate-950 p-3 text-white" autocomplete="off">
         </label>
+        <label class="mt-3 block text-sm font-bold text-emerald-100" for="public-end-count">局數
+          <select id="public-end-count" onchange="updatePublicSetupStatus()" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white">
+            <option value="4" selected>4 局（預設）</option>
+            <option value="6">6 局</option>
+          </select>
+        </label>
         <label class="mt-3 block text-sm font-bold text-emerald-100" for="public-end-duration">每局時間
-          <select id="public-end-duration" onchange="updateCustomEndDuration()" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white">
+          <select id="public-end-duration" onchange="updateCustomEndDuration(); updatePublicSetupStatus()" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white">
             <option value="3" selected>3 分鐘（預設）</option>
             <option value="4">4 分鐘</option>
             <option value="5">5 分鐘</option>
@@ -268,10 +274,10 @@
           </select>
         </label>
         <label id="custom-end-duration-wrap" class="hidden mt-3 block text-sm font-bold text-emerald-100" for="public-custom-end-minutes">自訂時間（1～30 分鐘）
-          <input id="public-custom-end-minutes" type="number" min="1" max="30" step="1" value="6" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white" inputmode="numeric">
+          <input id="public-custom-end-minutes" oninput="updatePublicSetupStatus()" type="number" min="1" max="30" step="1" value="6" class="mt-1 w-full rounded-xl border border-emerald-900 bg-slate-950 p-3 text-white" inputmode="numeric">
         </label>
         <button id="public-start-btn" onclick="startPublicScoreboard()" class="mt-4 w-full rounded-xl bg-emerald-700 py-4 font-black text-white hover:bg-emerald-600">開始使用</button>
-        <p id="public-scoreboard-status" class="mt-3 text-xs text-emerald-200/80">每局 3 分鐘預設，共 4 局。開始比賽後本場時間會鎖定。</p>
+        <p id="public-scoreboard-status" class="mt-3 text-xs text-emerald-200/80">每局 3 分鐘，共 4 局。開始比賽後本場局數與時間會鎖定。</p>
       </div>
       <div id="authenticated-match-picker">
         <select id="region-select" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3"></select>
@@ -290,7 +296,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
         <button onclick="applyGameMode('Team')" class="touch-btn text-left bg-slate-950 border border-emerald-700 rounded-xl p-4 md:col-span-2">
           <div class="font-black text-emerald-200">團體賽</div>
-          <div class="text-sm text-slate-400">本機記分板固定 4 局；每局時間依賽前設定</div>
+          <div class="text-sm text-slate-400">本機記分板局數（4 或 6 局）與每局時間依賽前設定</div>
         </button>
         <button onclick="applyGameMode('WarmUpOnly')" class="touch-btn text-left bg-slate-950 border border-amber-700/60 rounded-xl p-4 md:col-span-2">
           <div class="font-black text-amber-200">僅計時暖身</div>
@@ -574,6 +580,8 @@
     };
 
     let selectedEndMinutes = 3;
+    let selectedEndCount = 4;
+    const PUBLIC_END_COUNT_OPTIONS = [4, 6];
     let isRestoringLocalProgress = false;
 
     function isTrainingMode() {
@@ -1250,7 +1258,7 @@
     function gameConfig(mode, scoreboardConfig) {
       const config = window.NationalFormalMsbConfig.gameConfig(mode, scoreboardConfig);
       if (!isPublicScoreboardMode() || config.warmUpOnly) return config;
-      return { ...config, ends: 4, seconds: selectedEndMinutes * 60 };
+      return { ...config, ends: selectedEndCount, seconds: selectedEndMinutes * 60 };
     }
 
     function applyGameMode(mode) {
@@ -3417,6 +3425,8 @@
       const select = document.getElementById("public-end-duration");
       const custom = document.getElementById("public-custom-end-minutes");
       if (!select || !custom) return;
+      const endCountSelect = document.getElementById("public-end-count");
+      if (endCountSelect) endCountSelect.value = String(selectedEndCount);
       const value = Number(minutes);
       if ([3, 4, 5].includes(value)) {
         select.value = String(value);
@@ -3438,12 +3448,15 @@
         if (custom) custom.focus();
         return null;
       }
+      const endCountSelect = document.getElementById("public-end-count");
+      const endCount = Number(endCountSelect && endCountSelect.value);
+      selectedEndCount = PUBLIC_END_COUNT_OPTIONS.includes(endCount) ? endCount : 4;
       selectedEndMinutes = minutes;
       return minutes * 60;
     }
 
     function setPublicSetupLocked(locked) {
-      ["public-red-name", "public-blue-name", "public-end-duration", "public-custom-end-minutes"].forEach(id => {
+      ["public-red-name", "public-blue-name", "public-end-count", "public-end-duration", "public-custom-end-minutes"].forEach(id => {
         const input = document.getElementById(id);
         if (input) input.disabled = !!locked;
       });
@@ -3455,7 +3468,24 @@
       const status = document.getElementById("public-scoreboard-status");
       if (status) status.textContent = locked
         ? "比賽已開始，本場時間與隊伍已鎖定。重整頁面會恢復目前比賽。"
-        : "每局 3 分鐘預設，共 4 局。開始比賽後本場時間會鎖定。";
+        : publicSetupStatusText();
+    }
+
+    function publicSetupStatusText() {
+      const endCountSelect = document.getElementById("public-end-count");
+      const durationSelect = document.getElementById("public-end-duration");
+      const custom = document.getElementById("public-custom-end-minutes");
+      const ends = Number(endCountSelect && endCountSelect.value) || selectedEndCount;
+      const minutes = durationSelect && durationSelect.value === "custom"
+        ? Number(custom && custom.value)
+        : Number(durationSelect && durationSelect.value) || selectedEndMinutes;
+      return `每局 ${minutes} 分鐘，共 ${ends} 局。開始比賽後本場局數與時間會鎖定。`;
+    }
+
+    function updatePublicSetupStatus() {
+      const status = document.getElementById("public-scoreboard-status");
+      const start = document.getElementById("public-start-btn");
+      if (status && !(start && start.disabled)) status.textContent = publicSetupStatusText();
     }
 
     function archiveLocalReport(result) {
@@ -3480,12 +3510,14 @@
       const locked = currentMatch && !state.reportSubmitted
         && (!state.isWarmUp || state.timerEverStarted || hasMatchProgress());
       if (!resume && locked) {
-        alert("比賽已開始，不能重設本場或更改每局時間。");
+        alert("比賽已開始，不能重設本場或更改局數、每局時間。");
         return false;
       }
       if (progress) {
         selectedEndMinutes = Number(progress.selectedEndMinutes) || Number(progress.endSeconds) / 60 || 3;
         if (!Number.isInteger(selectedEndMinutes) || selectedEndMinutes < 1 || selectedEndMinutes > 30) selectedEndMinutes = 3;
+        const restoredEnds = Number(progress.totalEnds);
+        selectedEndCount = PUBLIC_END_COUNT_OPTIONS.includes(restoredEnds) ? restoredEnds : 4;
       } else {
         const selectedSeconds = selectedEndDurationSeconds();
         if (!selectedSeconds) return false;
